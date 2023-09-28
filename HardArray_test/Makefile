@@ -1,13 +1,13 @@
 CC=g++
 CFLAGS=-c -Wall
 
-all: arrayclusters
+all: HardArray_cluster
 
-arrayclusters: arrayclusters.o
-	$(CC) arrayclusters.o -o arrayclusters
+HardArray_cluster: HardArray_cluster.o
+	$(CC) HardArray_cluster.o -o HardArray_cluster
 
-arrayclusters.o: arrayclusters.cpp
-	$(CC) $(CFLAGS) arrayclusters.cpp
+HardArray_cluster.o: HardArray_cluster.cpp
+	$(CC) $(CFLAGS) HardArray_cluster.cpp
 
 clean:
-	rm -rf *.o arrayclusters
+	rm -rf *.o HardArray_cluster

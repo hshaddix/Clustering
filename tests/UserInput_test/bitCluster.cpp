@@ -26,29 +26,26 @@ std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int,
     int offset = 0; // Initialize offset for the first strip
 
     for (size_t i = 0; i < clusters.size(); ++i) {
-        if (clusters[i].first == EMPTY_CLUSTER_SET && clusters[i].second == EMPTY_CLUSTER_SET) {
-            // Output the error code for an empty cluster set
-            std::cout << "$" << std::hex << EMPTY_CLUSTER_SET_ERROR_CODE << " ";
-            offset++; // Increment the offset counter for the empty cluster set
-            continue;
-        }
+        int current_start = clusters[i].first;
+        int current_end = clusters[i].first + (clusters[i].second & ~1) - 1;
 
-        int size_without_flag = clusters[i].second & ~1; // Remove the LSB flag
-        int current_f = clusters[i].first + size_without_flag - 1;
-
-        // Check if the current cluster is the last in the strip using the LSB flag
+        // Increment offset if it's the last cluster in the strip
         bool is_last_in_strip = clusters[i].second & 1;
         if (is_last_in_strip) {
-            offset++; // Increment the offset for the next strip
+            offset++;
         }
 
-        // If it's not the last cluster in the strip, check if it's adjacent to the next
-        if (!is_last_in_strip && i + 1 < clusters.size() && are_adjacent(clusters[i], clusters[i + 1], offset)) {
-            current_f = clusters[i + 1].second & ~1; // Merge with the next cluster
+        // Check if adjacent and merge
+        while (i + 1 < clusters.size() && are_adjacent({current_start, current_end}, clusters[i + 1], offset)) {
+            // The end of the merged cluster should be the end of the next cluster
+            current_end = clusters[i + 1].first + (clusters[i + 1].second & ~1) - 1;
             i++; // Skip the next cluster as it has been merged
+            if (clusters[i].second & 1) { // Check if this is the last cluster in its strip
+                offset++;
+            }
         }
 
-        merged.push_back({clusters[i].first, current_f});
+        merged.push_back({current_start, current_end});
     }
 
     return merged;

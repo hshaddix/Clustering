@@ -17,7 +17,7 @@ std::pair<int, int> calculate_if_from_sum_size(int sum, int size) {
 bool are_adjacent(const std::pair<int, int>& cluster1, const std::pair<int, int>& cluster2, int offset) {
     int cluster2_start_with_offset = cluster2.first + offset * STRIP_SIZE;
     return cluster1.second == cluster2_start_with_offset - 1;
-// ... [Previous includes and functions]
+}
 
 std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int, int>>& clusters) {
     std::vector<std::pair<int, int>> merged;
@@ -51,9 +51,6 @@ std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int,
 
     return merged;
 }
-
-// ... [Main function remains unchanged]
-
 
 int main(int argc, char *argv[]) {
     if (argc < 3 || argc % 2 == 0) {

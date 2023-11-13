@@ -27,15 +27,16 @@ std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int,
         int current_i = clusters[i].first;
         int current_f = clusters[i].second;
         
-        // Check if the current cluster is the last in the strip
+        // Increment offset if it's the last cluster in the strip
         bool is_last_in_strip = current_f == STRIP_SIZE - 1;
         if (is_last_in_strip) {
             offset++;
         }
 
-        // Check if adjacent and merge
         while (i + 1 < clusters.size() && are_adjacent(clusters[i], clusters[i + 1], offset)) {
-            current_f = clusters[i + 1].second; // Merge with the next cluster
+            // Apply offset to the start of the next cluster
+            int next_cluster_start = clusters[i + 1].first + offset * STRIP_SIZE;
+            current_f = next_cluster_start + (clusters[i + 1].second - clusters[i + 1].first); // Adjust the endpoint
             i++; // Skip the next cluster as it has been merged
             if (clusters[i].second == STRIP_SIZE - 1) { // Check if this is the last cluster in its strip
                 offset++;
@@ -68,9 +69,11 @@ int main(int argc, char *argv[]) {
 
     // Convert the merged clusters back to {sum, size} format and output as hex
     for (const auto& cluster : merged_clusters) {
-        int sum = cluster.first + cluster.second;
-        int size = cluster.second - cluster.first + 1;
-        std::cout << "{" << std::hex << sum << "," << std::dec << size << "} ";
+        if (cluster.first != EMPTY_CLUSTER_SET || cluster.second != EMPTY_CLUSTER_SET) {
+            int sum = cluster.first + cluster.second;
+            int size = cluster.second - cluster.first + 1;
+            std::cout << "{" << std::hex << sum << "," << std::dec << size << "} ";
+        }
     }
     std::cout << std::endl;
 

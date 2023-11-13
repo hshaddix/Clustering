@@ -37,8 +37,7 @@ std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int,
 
         // Check if adjacent and merge
         while (i + 1 < clusters.size() && are_adjacent({current_start, current_end}, clusters[i + 1], offset)) {
-            // The end of the merged cluster should be the end of the next cluster
-            current_end = clusters[i + 1].first + (clusters[i + 1].second & ~1) - 1;
+            current_end = clusters[i + 1].first + (clusters[i + 1].second & ~1) - 1 + offset * STRIP_SIZE;
             i++; // Skip the next cluster as it has been merged
             if (clusters[i].second & 1) { // Check if this is the last cluster in its strip
                 offset++;

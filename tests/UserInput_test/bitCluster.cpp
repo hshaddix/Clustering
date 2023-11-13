@@ -24,14 +24,19 @@ std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int,
     int offset = 0; // Initialize offset for the first strip
 
     for (size_t i = 0; i < clusters.size(); ++i) {
-        int current_i = clusters[i].first + offset * STRIP_SIZE;
-        int current_f = clusters[i].second + offset * STRIP_SIZE;
+        int current_i = clusters[i].first;
+        int current_f = clusters[i].second;
 
-        // Check for empty cluster set
         if (clusters[i].first == EMPTY_CLUSTER_SET && clusters[i].second == EMPTY_CLUSTER_SET) {
-            offset++; // Increment offset for the empty cluster set
+            // Handle empty cluster set
+            merged.push_back({EMPTY_CLUSTER_SET, EMPTY_CLUSTER_SET});
+            offset++; // Increment offset for the next strip
             continue;
         }
+
+        // Adjust current cluster points with offset
+        current_i += offset * STRIP_SIZE;
+        current_f += offset * STRIP_SIZE;
 
         // Merge clusters if adjacent
         while (i + 1 < clusters.size()) {
@@ -39,19 +44,24 @@ std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int,
             int next_cluster_f = clusters[i + 1].second + offset * STRIP_SIZE;
 
             if (are_adjacent({current_i, current_f}, {next_cluster_i, next_cluster_f}, 0)) {
-                current_f = next_cluster_f; // Adjust the endpoint
-                i++; // Skip the next cluster as it has been merged
+                current_f = next_cluster_f; // Merge with the next cluster
+                i++; // Skip the next cluster
             } else {
                 break;
             }
+
+            // Check if this is the last cluster in its strip to increment offset
+            if (clusters[i].second == STRIP_SIZE - 1) {
+                offset++;
+            }
         }
 
-        merged.push_back({current_i - offset * STRIP_SIZE, current_f - offset * STRIP_SIZE});
+        // Convert back to original {sum, size} format before adding to merged list
+        merged.push_back({(current_f - current_i + 1) / 2 + current_i - offset * STRIP_SIZE, current_f - current_i + 1});
     }
 
     return merged;
 }
-
 int main(int argc, char *argv[]) {
     if (argc < 3 || argc % 2 == 0) {
         std::cerr << "Usage: " << argv[0] << " sum1 size1 sum2 size2 ..." << std::endl;

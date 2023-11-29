@@ -1,3 +1,5 @@
+
+
 #include <iostream>
 #include <vector>
 #include <bitset>
@@ -33,7 +35,9 @@ std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int,
     for (const auto& cluster : input_clusters) {
         int address = cluster.first;
         bool is_last_cluster = cluster.second;
-        auto [i, f] = calculate_if_from_address(address);
+        std::pair<int, int> if_pair = calculate_if_from_address(address);
+        int i = if_pair.first;
+        int f = if_pair.second;
 
         if (address == 0 && is_last_cluster) {
             if (!merged.empty() || current_strip == 0) { // Mark empty strip if it's not the first cluster
@@ -89,4 +93,3 @@ int main() {
 
     return 0;
 }
-

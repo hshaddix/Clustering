@@ -3,78 +3,85 @@
 #include <bitset>
 #include <string>
 
+const int EMPTY_CLUSTER_SET = 0;
+const int EMPTY_CLUSTER_SET_ERROR_CODE = 0xFE;
 const int STRIP_SIZE = 126;
-const int HIT_ADDRESS_BITS = 8;
 
-std::pair<int, bool> parse_cluster(const std::string& binary) {
-    std::bitset<HIT_ADDRESS_BITS> hit_address(std::string(binary.begin(), binary.end() - 1));
-    bool is_last_cluster = binary.back() == '1';
-    return {hit_address.to_ulong(), is_last_cluster};
-}
-
-std::pair<int, int> calculate_if_from_address(int address) {
-    int size = 2; // Assuming size is always 2
-    int f = (address + size - 1) / 2;
-    int i = (address - size + 1) / 2;
+std::pair<int, int> calculate_if_from_sum_size(int sum, int size) {
+    if (sum == 0 && size == 0) {
+        return {EMPTY_CLUSTER_SET_ERROR_CODE, EMPTY_CLUSTER_SET_ERROR_CODE};
+    }
+    int f = (sum + size - 1) / 2;
+    int i = (sum - size + 1) / 2;
     return {i, f};
 }
 
-bool are_adjacent(int f1, int i2) {
-    return f1 == i2 - 1;
+bool are_adjacent(const std::pair<int, int>& cluster1, const std::pair<int, int>& cluster2, int offset) {
+    int cluster2_start_with_offset = cluster2.first + offset * STRIP_SIZE;
+    return cluster1.second == cluster2_start_with_offset - 1;
 }
 
-std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int, bool>>& input_clusters) {
+std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int, int>>& clusters) {
     std::vector<std::pair<int, int>> merged;
-    int current_strip = 0;
-    int start_i = -1;
-    int end_f = -1;
+    int offset = 0;
+    int previous_f = -1;
 
-    for (const auto& cluster : input_clusters) {
-        int address = cluster.first;
-        bool is_last_cluster = cluster.second;
-        auto if_pair = calculate_if_from_address(address);
-        int i = if_pair.first + current_strip * STRIP_SIZE;
-        int f = if_pair.second + current_strip * STRIP_SIZE;
+    for (size_t i = 0; i < clusters.size(); ++i) {
+        if (clusters[i].first == EMPTY_CLUSTER_SET_ERROR_CODE) {
+            std::cout << "FE "; // Output FE for empty strip
+            offset++;
+            continue;
+        }
 
-        if (start_i == -1) {
-            start_i = i;
-            end_f = f;
-        } else if (are_adjacent(end_f, i)) {
-            end_f = f;
+        int current_i = clusters[i].first + offset * STRIP_SIZE;
+        int current_f = clusters[i].second + offset * STRIP_SIZE;
+
+        if (previous_f > current_i) {
+            offset++;
+            current_i += STRIP_SIZE;
+            current_f += STRIP_SIZE;
+        }
+        previous_f = current_f;
+
+        if (!merged.empty() && are_adjacent(merged.back(), {current_i, current_f}, 0)) {
+            merged.back().second = current_f;
         } else {
-            merged.push_back({start_i, end_f});
-            start_i = i;
-            end_f = f;
+            merged.push_back({current_i, current_f});
         }
-
-        if (is_last_cluster) {
-            current_strip++;
-        }
-    }
-
-    // Add the last cluster if not already added
-    if (start_i != -1 && end_f != -1) {
-        merged.push_back({start_i, end_f});
     }
 
     return merged;
 }
 
 int main() {
-    std::vector<std::pair<int, bool>> clusters;
+    std::vector<std::pair<int, int>> clusters;
     std::string binary_input;
 
     // Read binary inputs (9-bit strings) from standard input
     while (std::cin >> binary_input) {
-        clusters.push_back(parse_cluster(binary_input));
-    }
+        std::bitset<8> binary_sum(binary_input.substr(0, 8));
+        int sum = static_cast<int>(binary_sum.to_ulong());
+        int size = 2;  // Assuming size is always 2
+        bool is_last_cluster = binary_input[8] == '1';
+        
+        auto cluster = calculate_if_from_sum_size(sum, size);
+        if (cluster.first != EMPTY_CLUSTER_SET_ERROR_CODE) {
+            clusters.push_back(cluster);
+        }
 
-    auto merged_clusters = merge_clusters(clusters);
+        // Handle last cluster in the strip
+        if (is_last_cluster) {
+            auto merged_clusters = merge_clusters(clusters);
+            clusters.clear();
 
-    for (const auto& cluster : merged_clusters) {
-        std::cout << "{" << std::hex << cluster.first << ", " << std::dec << cluster.second - cluster.first + 1 << "} ";
+            for (const auto& cluster : merged_clusters) {
+                std::bitset<8> binary_sum(cluster.first + cluster.second);
+                int size = cluster.second - cluster.first + 1;
+                std::cout << "{" << binary_sum.to_string() << "," << std::bitset<8>(size).to_string() << "} ";
+            }
+            std::cout << std::endl;
+        }
     }
-    std::cout << std::endl;
 
     return 0;
 }

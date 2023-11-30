@@ -19,6 +19,7 @@ bool are_adjacent(const std::pair<int, int>& cluster1, const std::pair<int, int>
 std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int, int>>& clusters) {
     std::vector<std::pair<int, int>> merged;
     int offset = 0;
+    int previous_f = -1;
 
     for (size_t i = 0; i < clusters.size(); ++i) {
         int current_i = clusters[i].first + offset * STRIP_SIZE;
@@ -49,6 +50,7 @@ int main() {
         int size = 2;  // Assuming size is always 2
         auto cluster = calculate_if_from_sum_size(sum, size);
         clusters.push_back(cluster);
+
         if (binary_input[8] == '1') {  // Last cluster in the strip
             auto merged_clusters = merge_clusters(clusters);
             clusters.clear();

@@ -14,11 +14,11 @@ $(TARGET).o: $(TARGET).cpp
 
 run_case1:
 	@echo "Running case 1 (3 4 f9 2 1 2):"
-	@echo "000000110 111110011 000000011" | ./$(TARGET)
+	@echo "00000011 00000100 11111001 00000010 00000001 00000010" | ./$(TARGET)
 
 run_case2:
 	@echo "Running case 2 (Empty first strip, f9 2 1 2):"
-	@echo "000000000 111110011 000000011" | ./$(TARGET)
+	@echo "00000000 00000010 11111001 00000010 00000001 00000010" | ./$(TARGET)
 
 clean:
 	rm -f $(TARGET) $(TARGET).o

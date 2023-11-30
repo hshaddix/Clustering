@@ -30,7 +30,8 @@ std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int,
             merged.push_back({current_i, current_f});
         }
 
-        if (i + 1 < clusters.size() && clusters[i].first != 0 && clusters[i + 1].first == 0) {
+        // Increment offset after processing last cluster in a strip
+        if (i < clusters.size() - 1 && clusters[i + 1].first == 0) {
             offset++;
         }
     }
@@ -40,17 +41,23 @@ std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int,
 
 int main() {
     std::vector<std::pair<int, int>> clusters;
-    std::string binary_input;
+    std::string binary_input_line;
 
-    // Read binary inputs (9-bit strings) from standard input
-    while (std::cin >> binary_input) {
-        std::bitset<8> binary_sum(binary_input.substr(0, 8));
+    // Read binary inputs (each cluster as a line) from standard input
+    while (getline(std::cin, binary_input_line)) {
+        std::istringstream iss(binary_input_line);
+        std::string binary_sum_str, binary_size_str;
+        iss >> binary_sum_str >> binary_size_str;
+
+        std::bitset<8> binary_sum(binary_sum_str);
+        std::bitset<8> binary_size(binary_size_str);
         int sum = static_cast<int>(binary_sum.to_ulong());
-        int size = 2;  // Assuming size is always 2
+        int size = static_cast<int>(binary_size.to_ulong());
         auto cluster = calculate_if_from_sum_size(sum, size);
         clusters.push_back(cluster);
 
-        if (binary_input[8] == '1') {  // Last cluster in the strip
+        // Check if it's the last cluster in a strip
+        if (binary_input_line.back() == '1') {  // Last cluster in the strip
             auto merged_clusters = merge_clusters(clusters);
             clusters.clear();
 

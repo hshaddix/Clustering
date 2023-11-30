@@ -19,49 +19,41 @@ std::pair<int, int> calculate_if_from_address(int address) {
     return {i, f};
 }
 
+bool are_adjacent(int f1, int i2) {
+    return f1 == i2 - 1;
+}
+
 std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int, bool>>& input_clusters) {
     std::vector<std::pair<int, int>> merged;
     int current_strip = 0;
     int start_i = -1;
     int end_f = -1;
-    bool last_in_strip = false;
 
     for (const auto& cluster : input_clusters) {
         int address = cluster.first;
         bool is_last_cluster = cluster.second;
         auto if_pair = calculate_if_from_address(address);
-        int i = if_pair.first;
-        int f = if_pair.second;
-
-        i += current_strip * STRIP_SIZE;
-        f += current_strip * STRIP_SIZE;
-
-        if (last_in_strip) {
-            last_in_strip = false;
-            if (i == end_f + 1) {
-                end_f = f;
-                continue;
-            } else {
-                merged.push_back({start_i, end_f});
-                start_i = i;
-                end_f = f;
-            }
-        }
+        int i = if_pair.first + current_strip * STRIP_SIZE;
+        int f = if_pair.second + current_strip * STRIP_SIZE;
 
         if (start_i == -1) {
             start_i = i;
+            end_f = f;
+        } else if (are_adjacent(end_f, i)) {
+            end_f = f;
+        } else {
+            merged.push_back({start_i, end_f});
+            start_i = i;
+            end_f = f;
         }
 
-        end_f = f;
-
         if (is_last_cluster) {
-            last_in_strip = true;
             current_strip++;
         }
     }
 
-    // Add the last cluster if it wasn't added
-    if (start_i != -1) {
+    // Add the last cluster if not already added
+    if (start_i != -1 && end_f != -1) {
         merged.push_back({start_i, end_f});
     }
 

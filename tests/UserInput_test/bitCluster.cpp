@@ -2,6 +2,7 @@
 #include <vector>
 #include <bitset>
 #include <string>
+#include <sstream> // Include for std::istringstream
 
 const int STRIP_SIZE = 126;
 const int HIT_ADDRESS_BITS = 8;
@@ -30,7 +31,6 @@ std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int,
             merged.push_back({current_i, current_f});
         }
 
-        // Increment offset after processing last cluster in a strip
         if (i < clusters.size() - 1 && clusters[i + 1].first == 0) {
             offset++;
         }

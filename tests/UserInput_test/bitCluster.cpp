@@ -30,7 +30,7 @@ std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int,
             merged.push_back({current_i, current_f});
         }
 
-        if (i + 1 < clusters.size() && clusters[i + 1].first == 0) {
+        if (i + 1 < clusters.size() && clusters[i].first != 0 && clusters[i + 1].first == 0) {
             offset++;
         }
     }

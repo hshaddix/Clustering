@@ -2,10 +2,8 @@
 #include <vector>
 #include <bitset>
 #include <string>
-#include <sstream> // Include for std::istringstream
 
 const int STRIP_SIZE = 126;
-const int HIT_ADDRESS_BITS = 8;
 
 std::pair<int, int> calculate_if_from_sum_size(int sum, int size) {
     int f = (sum + size - 1) / 2;
@@ -21,9 +19,9 @@ std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int,
     std::vector<std::pair<int, int>> merged;
     int offset = 0;
 
-    for (size_t i = 0; i < clusters.size(); ++i) {
-        int current_i = clusters[i].first + offset * STRIP_SIZE;
-        int current_f = clusters[i].second + offset * STRIP_SIZE;
+    for (const auto& cluster : clusters) {
+        int current_i = cluster.first + offset * STRIP_SIZE;
+        int current_f = cluster.second + offset * STRIP_SIZE;
 
         if (!merged.empty() && are_adjacent(merged.back(), {current_i, current_f})) {
             merged.back().second = current_f;
@@ -31,7 +29,8 @@ std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int,
             merged.push_back({current_i, current_f});
         }
 
-        if (i < clusters.size() - 1 && clusters[i + 1].first == 0) {
+        // Increment offset for next strip
+        if (cluster.first == 0) {
             offset++;
         }
     }
@@ -41,36 +40,25 @@ std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int,
 
 int main() {
     std::vector<std::pair<int, int>> clusters;
-    std::string binary_input_line;
+    std::string binary_input;
+    std::cin >> binary_input;
 
-    // Read binary inputs (each cluster as a line) from standard input
-    while (getline(std::cin, binary_input_line)) {
-        std::istringstream iss(binary_input_line);
-        std::string binary_sum_str, binary_size_str;
-        iss >> binary_sum_str >> binary_size_str;
-
-        std::bitset<8> binary_sum(binary_sum_str);
-        std::bitset<8> binary_size(binary_size_str);
-        int sum = static_cast<int>(binary_sum.to_ulong());
-        int size = static_cast<int>(binary_size.to_ulong());
-        auto cluster = calculate_if_from_sum_size(sum, size);
-        clusters.push_back(cluster);
-
-        // Check if it's the last cluster in a strip
-        if (binary_input_line.back() == '1') {  // Last cluster in the strip
-            auto merged_clusters = merge_clusters(clusters);
-            clusters.clear();
-
-            for (const auto& cluster : merged_clusters) {
-                int sum = cluster.first + cluster.second;
-                int size = cluster.second - cluster.first + 1;
-                std::bitset<8> binary_sum_output(sum);
-                std::bitset<8> binary_size_output(size);
-                std::cout << "{" << binary_sum_output.to_string() << "," << binary_size_output.to_string() << "} ";
-            }
-            std::cout << std::endl;
-        }
+    for (size_t i = 0; i < binary_input.length(); i += 17) {  // Each cluster is 16 bits + 1 separator
+        std::bitset<8> binary_sum(binary_input.substr(i, 8));
+        std::bitset<8> binary_size(binary_input.substr(i + 9, 8));
+        clusters.push_back(calculate_if_from_sum_size(binary_sum.to_ulong(), binary_size.to_ulong()));
     }
+
+    auto merged_clusters = merge_clusters(clusters);
+
+    for (const auto& cluster : merged_clusters) {
+        int sum = cluster.first + cluster.second;
+        int size = cluster.second - cluster.first + 1;
+        std::bitset<8> binary_sum_output(sum);
+        std::bitset<8> binary_size_output(size);
+        std::cout << "{" << binary_sum_output.to_string() << "," << binary_size_output.to_string() << "} ";
+    }
+    std::cout << std::endl;
 
     return 0;
 }

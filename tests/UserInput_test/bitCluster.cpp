@@ -15,28 +15,31 @@ bool are_adjacent(const std::pair<int, int>& cluster1, const std::pair<int, int>
     return cluster1.second == cluster2.first - 1;
 }
 
-std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int, int>>& clusters, bool is_last_in_strip) {
+std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int, int>>& clusters) {
     std::vector<std::pair<int, int>> merged;
     int offset = 0;
+    bool last_in_strip = false;
 
     for (size_t i = 0; i < clusters.size(); ++i) {
-        int current_i = clusters[i].first;
-        int current_f = clusters[i].second;
+        int current_i = clusters[i].first + offset * STRIP_SIZE;
+        int current_f = clusters[i].second + offset * STRIP_SIZE;
 
-        if (i > 0 && is_last_in_strip) {
-            current_i += STRIP_SIZE;
-            current_f += STRIP_SIZE;
-        }
-
+        // Merge clusters if they are adjacent
         if (!merged.empty() && are_adjacent(merged.back(), {current_i, current_f})) {
             merged.back().second = current_f;
         } else {
             merged.push_back({current_i, current_f});
         }
 
-        if (is_last_in_strip) {
+        // If this is the last cluster in the strip, mark flag and increment offset
+        if (last_in_strip) {
             offset++;
-            is_last_in_strip = false;  // Reset for next cluster
+            last_in_strip = false;
+        }
+
+        // Check if this cluster is marked as the last in its strip
+        if (i + 1 < clusters.size() && clusters[i + 1].first == 0) {
+            last_in_strip = true;
         }
     }
 
@@ -48,18 +51,16 @@ int main() {
     std::string binary_input;
     std::cin >> binary_input;
 
-    bool is_last_in_strip = false;
-    for (size_t i = 0; i < binary_input.length(); i += 18) {  // Each cluster is 17 bits + 1 space
+    for (size_t i = 0; i < binary_input.length(); i += 18) { // 16 bits per cluster + 2 spaces
         std::bitset<8> binary_sum(binary_input.substr(i, 8));
         std::bitset<8> binary_size(binary_input.substr(i + 9, 8)); // Skip the space
-        is_last_in_strip = (i + 17 < binary_input.length() && binary_input[i + 17] == '1'); // Check if it's the last cluster in a strip
+        bool is_last_in_strip = (i + 17 < binary_input.length()) && (binary_input[i + 17] == '1');
 
         clusters.push_back(calculate_if_from_sum_size(binary_sum.to_ulong(), binary_size.to_ulong()));
 
-        // Process merging at the end of each strip or at the end of input
+        // If this cluster is the last in its strip, process merging
         if (is_last_in_strip || i + 18 >= binary_input.length()) {
-            auto merged_clusters = merge_clusters(clusters, is_last_in_strip);
-            clusters = merged_clusters;
+            clusters = merge_clusters(clusters);
         }
     }
 

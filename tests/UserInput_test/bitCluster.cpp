@@ -7,7 +7,7 @@ const int STRIP_SIZE = 126;
 
 std::pair<int, int> calculate_if_from_sum_size(int sum, int size) {
     int f = (sum + size - 1) / 2;
-    int i = (sum - size + 1) / 2;
+    int i = sum - f;
     return {i, f};
 }
 
@@ -18,9 +18,6 @@ std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int,
     for (size_t i = 0; i < clusters.size(); ++i) {
         if (clusters[i].first == -1 && clusters[i].second == -1) {
             // Handle empty strip
-            if (merged.empty() || merged.back().first != -1) {
-                merged.push_back({-1, -1});
-            }
             offset++;
             continue;
         }
@@ -28,7 +25,7 @@ std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int,
         int current_i = clusters[i].first + offset * STRIP_SIZE;
         int current_f = clusters[i].second + offset * STRIP_SIZE;
 
-        if (!merged.empty() && merged.back().second == current_i - 1) {
+        if (!merged.empty() && merged.back().second + 1 == current_i) {
             merged.back().second = current_f; // Merge with previous cluster
         } else {
             merged.push_back({current_i, current_f});
@@ -61,10 +58,17 @@ int main() {
 
     auto merged_clusters = merge_clusters(clusters);
 
+    bool emptyStripEncountered = false;
     for (const auto& cluster : merged_clusters) {
         if (cluster.first == -1 && cluster.second == -1) {
             std::cout << "FE ";
+            emptyStripEncountered = true;
             continue;
+        }
+
+        if (emptyStripEncountered) {
+            std::cout << "FE ";
+            emptyStripEncountered = false;
         }
 
         int sum = cluster.first + cluster.second;

@@ -7,9 +7,8 @@ const int STRIP_SIZE = 126;
 const int EMPTY_CLUSTER_SET = 0xFE; // Hexadecimal FE to represent an empty cluster
 
 std::pair<int, int> calculate_if_from_sum_size(int sum, int size) {
-    // Check for an empty strip
     if (sum == 0 && size == 1) {
-        return {EMPTY_CLUSTER_SET, EMPTY_CLUSTER_SET};
+        return {EMPTY_CLUSTER_SET, EMPTY_CLUSTER_SET}; // Mark as an empty cluster
     }
     int f = (sum + size - 1) / 2;
     int i = (sum - size + 1) / 2;
@@ -25,9 +24,8 @@ std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int,
     int offset = 0;
 
     for (size_t i = 0; i < clusters.size(); ++i) {
-        // Check if the cluster represents an empty strip
         if (clusters[i].first == EMPTY_CLUSTER_SET) {
-            merged.push_back(clusters[i]);
+            // Handle empty strip
             offset++; // Increment offset for next strip
             continue;
         }
@@ -53,16 +51,19 @@ int main() {
     for (size_t i = 0; i < binary_input.length(); i += 16) { // 16 bits per cluster
         std::bitset<8> binary_sum(binary_input.substr(i, 8));
         std::bitset<8> binary_size(binary_input.substr(i + 8, 8));
-        clusters.push_back(calculate_if_from_sum_size(binary_sum.to_ulong(), binary_size.to_ulong()));
+        auto cluster = calculate_if_from_sum_size(binary_sum.to_ulong(), binary_size.to_ulong());
+
+        if (cluster.first == EMPTY_CLUSTER_SET) {
+            std::cout << "FE ";
+            continue; // Skip merging for empty strip
+        }
+
+        clusters.push_back(cluster);
     }
 
     auto merged_clusters = merge_clusters(clusters);
 
     for (const auto& cluster : merged_clusters) {
-        if (cluster.first == EMPTY_CLUSTER_SET) {
-            std::cout << "FE ";
-            continue;
-        }
         int sum = cluster.first + cluster.second;
         int size = cluster.second - cluster.first + 1;
         std::bitset<8> binary_sum_output(sum);

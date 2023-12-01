@@ -18,19 +18,20 @@ bool are_adjacent(const std::pair<int, int>& cluster1, const std::pair<int, int>
 std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int, int>>& clusters) {
     std::vector<std::pair<int, int>> merged;
     int offset = 0;
+    bool last_in_strip = false;
 
     for (const auto& cluster : clusters) {
         int current_i = cluster.first + offset * STRIP_SIZE;
         int current_f = cluster.second + offset * STRIP_SIZE;
 
-        if (!merged.empty() && are_adjacent(merged.back(), {current_i, current_f})) {
+        if (last_in_strip && are_adjacent(merged.back(), {current_i, current_f})) {
             merged.back().second = current_f;
         } else {
             merged.push_back({current_i, current_f});
         }
 
-        // Increment offset for next strip
-        if (cluster.first == 0) {
+        last_in_strip = (cluster.first == 0 && cluster.second == 0); // Empty cluster indicates last in strip
+        if (last_in_strip) {
             offset++;
         }
     }
@@ -43,9 +44,9 @@ int main() {
     std::string binary_input;
     std::cin >> binary_input;
 
-    for (size_t i = 0; i < binary_input.length(); i += 17) {  // Each cluster is 16 bits + 1 separator
+    for (size_t i = 0; i < binary_input.length(); i += 16) {  // Each cluster is 16 bits
         std::bitset<8> binary_sum(binary_input.substr(i, 8));
-        std::bitset<8> binary_size(binary_input.substr(i + 9, 8));
+        std::bitset<8> binary_size(binary_input.substr(i + 8, 8));
         clusters.push_back(calculate_if_from_sum_size(binary_sum.to_ulong(), binary_size.to_ulong()));
     }
 

@@ -6,9 +6,6 @@
 const int STRIP_SIZE = 126;
 
 std::pair<int, int> calculate_if_from_sum_size(int sum, int size) {
-    if (sum == 0 && size == 1) {
-        return {0, -1};  // Special indicator for an empty strip
-    }
     int f = (sum + size - 1) / 2;
     int i = (sum - size + 1) / 2;
     return {i, f};
@@ -22,21 +19,18 @@ std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int,
     std::vector<std::pair<int, int>> merged;
     int offset = 0;
 
-    for (const auto& cluster : clusters) {
-        if (cluster.first == 0 && cluster.second == -1) { // Empty strip
-            std::cout << "FE ";
-            offset++; // Increment offset for the next strip
-            continue;
-        }
+    for (size_t i = 0; i < clusters.size(); ++i) {
+        int current_i = clusters[i].first + offset * STRIP_SIZE;
+        int current_f = clusters[i].second + offset * STRIP_SIZE;
 
-        int current_i = cluster.first + offset * STRIP_SIZE;
-        int current_f = cluster.second + offset * STRIP_SIZE;
-
-        // Merge if adjacent
         if (!merged.empty() && are_adjacent(merged.back().second, current_i)) {
             merged.back().second = current_f;
         } else {
             merged.push_back({current_i, current_f});
+        }
+
+        if (clusters[i].second == -1 || (i < clusters.size() - 1 && clusters[i + 1].first == -1)) {
+            offset++;
         }
     }
 
@@ -55,21 +49,30 @@ int main() {
     while (std::cin >> binary_input) {
         std::bitset<8> binary_sum(binary_input.substr(0, 8));
         std::bitset<8> binary_size(binary_input.substr(8, 8));
-        auto cluster = calculate_if_from_sum_size(binary_sum.to_ulong(), binary_size.to_ulong());
+        bool is_last_in_strip = binary_input[16] == '1';
 
-        if (cluster.second == -1) {
-            continue; // Skip processing for empty strip
+        if (binary_sum.to_ulong() == 0 && binary_size.to_ulong() == 0) {
+            clusters.push_back({-1, -1}); // Empty strip indicator
+            continue;
         }
 
-        clusters.push_back(cluster);
+        clusters.push_back(calculate_if_from_sum_size(binary_sum.to_ulong(), binary_size.to_ulong()));
+
+        if (is_last_in_strip) {
+            clusters.push_back({-1, -1}); // Mark end of strip
+        }
     }
 
     auto merged_clusters = merge_clusters(clusters);
 
     for (const auto& cluster : merged_clusters) {
-        int sum = cluster.first + cluster.second;
-        int size = cluster.second - cluster.first + 1;
-        std::cout << "{" << format_binary_output(sum) << "," << format_binary_output(size) << "} ";
+        if (cluster.first != -1) {
+            int sum = cluster.first + cluster.second;
+            int size = cluster.second - cluster.first + 1;
+            std::cout << "{" << format_binary_output(sum) << "," << format_binary_output(size) << "} ";
+        } else {
+            std::cout << "FE ";
+        }
     }
     std::cout << std::endl;
 

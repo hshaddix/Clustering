@@ -45,9 +45,9 @@ int main() {
         auto cluster = calculate_if_from_sum_size(binary_sum.to_ulong(), binary_size.to_ulong());
         clusters.push_back(cluster);
 
-        if (is_last_in_strip || binary_sum.to_ulong() == 0 && binary_size.to_ulong() == 0) {
-            clusters.push_back({-1, -1}); // Indicate end of strip
-        }
+        if (is_last_in_strip || (binary_sum.to_ulong() == 0 && binary_size.to_ulong() == 0)) {
+    clusters.push_back({-1, -1}); // Indicate end of strip
+}
     }
 
     auto merged_clusters = merge_clusters(clusters);

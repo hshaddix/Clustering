@@ -14,10 +14,6 @@ std::pair<int, int> calculate_if_from_sum_size(int sum, int size) {
     return {i, f};
 }
 
-bool are_adjacent(int f1, int i2) {
-    return f1 + 1 == i2;
-}
-
 std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int, int>>& clusters) {
     std::vector<std::pair<int, int>> merged;
     int offset = 0;
@@ -31,8 +27,8 @@ std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int,
         int current_i = cluster.first + offset * STRIP_SIZE;
         int current_f = cluster.second + offset * STRIP_SIZE;
 
-        if (!merged.empty() && are_adjacent(merged.back().second, current_i)) {
-            // Merge with the previous cluster
+        // Merge if adjacent
+        if (!merged.empty() && merged.back().second + 1 == current_i) {
             merged.back().second = current_f;
         } else {
             merged.push_back({current_i, current_f});
@@ -40,11 +36,6 @@ std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int,
     }
 
     return merged;
-}
-
-std::string convert_to_binary(int num) {
-    std::bitset<8> binary(num);
-    return binary.to_string();
 }
 
 int main() {
@@ -57,7 +48,7 @@ int main() {
         auto cluster = calculate_if_from_sum_size(binary_sum.to_ulong(), binary_size.to_ulong());
 
         if (cluster.first == -1) {
-            std::cout << "FE ";
+            std::cout << "FE "; // Output FE for empty strip
             continue;
         }
 
@@ -67,11 +58,9 @@ int main() {
     auto merged_clusters = merge_clusters(clusters);
 
     for (const auto& cluster : merged_clusters) {
-        if (cluster.first == -1) {
-            continue; // Skip processing for empty strip
-        }
-
-        std::cout << "{" << convert_to_binary(cluster.first) << "," << convert_to_binary(cluster.second) << "} ";
+        std::bitset<8> binary_sum_output(cluster.first);
+        std::bitset<8> binary_size_output(cluster.second - cluster.first + 1);
+        std::cout << "{" << binary_sum_output.to_string() << "," << binary_size_output.to_string() << "} ";
     }
     std::cout << std::endl;
 

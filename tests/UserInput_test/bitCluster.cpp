@@ -50,7 +50,6 @@ std::string convert_to_binary(int num) {
 int main() {
     std::vector<std::pair<int, int>> clusters;
     std::string binary_input;
-    bool empty_strip_encountered = false;
 
     while (std::cin >> binary_input) {
         std::bitset<8> binary_sum(binary_input.substr(0, 8));
@@ -58,7 +57,6 @@ int main() {
         auto cluster = calculate_if_from_sum_size(binary_sum.to_ulong(), binary_size.to_ulong());
 
         if (cluster.first == -1) {
-            empty_strip_encountered = true;
             std::cout << "FE ";
             continue;
         }

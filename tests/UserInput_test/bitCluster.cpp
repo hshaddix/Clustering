@@ -18,20 +18,25 @@ bool are_adjacent(const std::pair<int, int>& cluster1, const std::pair<int, int>
 std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int, int>>& clusters) {
     std::vector<std::pair<int, int>> merged;
     int offset = 0;
+    bool is_last_in_strip = false;
 
     for (size_t i = 0; i < clusters.size(); ++i) {
-        int current_i = clusters[i].first;
-        int current_f = clusters[i].second;
-
-        if (i > 0 && clusters[i - 1].second == STRIP_SIZE - 1) {
-            current_i += STRIP_SIZE;
-            current_f += STRIP_SIZE;
-        }
+        // Apply offset to current cluster
+        int current_i = clusters[i].first + offset * STRIP_SIZE;
+        int current_f = clusters[i].second + offset * STRIP_SIZE;
 
         if (!merged.empty() && are_adjacent(merged.back(), {current_i, current_f})) {
             merged.back().second = current_f;
         } else {
             merged.push_back({current_i, current_f});
+        }
+
+        // Determine if this is the last cluster in the current strip
+        is_last_in_strip = (i + 1 < clusters.size() && clusters[i + 1].first == 0);
+
+        // Increment offset at the end of each strip
+        if (is_last_in_strip) {
+            offset++;
         }
     }
 

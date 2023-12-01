@@ -22,15 +22,17 @@ std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int,
     std::vector<std::pair<int, int>> merged;
     int offset = 0;
 
-    for (size_t i = 0; i < clusters.size(); ++i) {
-        if (clusters[i].second == -1) { // Empty strip
-            offset++;
+    for (const auto& cluster : clusters) {
+        if (cluster.first == 0 && cluster.second == -1) { // Empty strip
+            std::cout << "FE ";
+            offset++; // Increment offset for the next strip
             continue;
         }
 
-        int current_i = clusters[i].first + offset * STRIP_SIZE;
-        int current_f = clusters[i].second + offset * STRIP_SIZE;
+        int current_i = cluster.first + offset * STRIP_SIZE;
+        int current_f = cluster.second + offset * STRIP_SIZE;
 
+        // Merge if adjacent
         if (!merged.empty() && are_adjacent(merged.back().second, current_i)) {
             merged.back().second = current_f;
         } else {
@@ -41,10 +43,9 @@ std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int,
     return merged;
 }
 
-std::string format_output(int sum, int size) {
-    std::bitset<8> binary_sum(sum);
-    std::bitset<8> binary_size(size);
-    return "{" + binary_sum.to_string() + "," + binary_size.to_string() + "} ";
+std::string format_binary_output(int num) {
+    std::bitset<8> binary(num);
+    return binary.to_string();
 }
 
 int main() {
@@ -57,8 +58,7 @@ int main() {
         auto cluster = calculate_if_from_sum_size(binary_sum.to_ulong(), binary_size.to_ulong());
 
         if (cluster.second == -1) {
-            std::cout << "FE ";
-            continue;
+            continue; // Skip processing for empty strip
         }
 
         clusters.push_back(cluster);
@@ -67,11 +67,9 @@ int main() {
     auto merged_clusters = merge_clusters(clusters);
 
     for (const auto& cluster : merged_clusters) {
-        if (cluster.first != 0 || cluster.second != -1) {
-            int sum = cluster.first + cluster.second;
-            int size = cluster.second - cluster.first + 1;
-            std::cout << format_output(sum, size);
-        }
+        int sum = cluster.first + cluster.second;
+        int size = cluster.second - cluster.first + 1;
+        std::cout << "{" << format_binary_output(sum) << "," << format_binary_output(size) << "} ";
     }
     std::cout << std::endl;
 

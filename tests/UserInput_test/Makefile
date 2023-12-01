@@ -12,11 +12,11 @@ $(TARGET).o: $(TARGET).cpp
 
 run_case1:
 	@echo "Running case 1 (3 4 f9 2 1 2):"
-	@echo "00000011000001000 11111001000000100 00000001000000101" | ./$(TARGET) # Added final bits '0', '0', '1'
+	@echo "00000011000001000 11111001000000101 00000001000000101" | ./$(TARGET)
 
 run_case2:
 	@echo "Running case 2 (Empty first strip, f9 2 1 2):"
-	@echo "00000000000000010 11111001000000100 00000001000000101" | ./$(TARGET) # Added final bits '0', '0', '1'
+	@echo "00000000000000001 11111001000000101 00000001000000101" | ./$(TARGET)
 
 clean:
 	rm -f $(TARGET) $(TARGET).o

@@ -10,15 +10,15 @@ $(TARGET): $(TARGET).o
 $(TARGET).o: $(TARGET).cpp
     $(CXX) $(CXXFLAGS) -c $(TARGET).cpp
 
-run_simple_case:
-    @echo "Running simple merging case:"
-    @echo "0000100001110100 0000100010000101" | ./$(TARGET)
+run_test1:
+    @echo "Running test 1:"
+    @echo "0000101100110100 0000101100110110" | ./$(TARGET)
 
-run_empty_strip_case:
-    @echo "Running empty strip and merged clusters case:"
-    @echo "0000000000000000 0000100010010111 0000100010100110" | ./$(TARGET)
+run_test2:
+    @echo "Running test 2:"
+    @echo "0000101101111011 0000101110000010" | ./$(TARGET)
 
 clean:
     rm -f $(TARGET) $(TARGET).o
 
-.PHONY: all clean run_simple_case run_empty_strip_case
+.PHONY: all clean run_test1 run_test2

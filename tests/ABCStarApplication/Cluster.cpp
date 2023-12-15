@@ -8,6 +8,8 @@ const int STRIP_SIZE = 126;
 
 struct Cluster {
     int stripNumber;
+    int startPosition;
+    int size;
     int globalStart;
     int globalEnd;
 };
@@ -21,7 +23,7 @@ Cluster parseCluster(const std::string& binary) {
     int globalStart = (stripNumber - 1) * STRIP_SIZE + startPosition;
     int globalEnd = globalStart + size - 1;
 
-    return {stripNumber, globalStart, globalEnd};
+    return {stripNumber, startPosition, size, globalStart, globalEnd};
 }
 
 std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
@@ -32,25 +34,27 @@ std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
     });
 
     std::vector<Cluster> merged;
-    for (const auto& cluster : clusters) {
-        if (!merged.empty() && merged.back().globalEnd + 1 >= cluster.globalStart) {
-            merged.back().globalEnd = std::max(merged.back().globalEnd, cluster.globalEnd);
+    Cluster current = clusters[0];
+
+    for (size_t i = 1; i < clusters.size(); ++i) {
+        if (current.globalEnd + 1 == clusters[i].globalStart) {
+            // Merge adjacent clusters
+            current.globalEnd = clusters[i].globalEnd;
+            current.size = current.globalEnd - current.globalStart + 1;
         } else {
-            merged.push_back(cluster);
+            merged.push_back(current);
+            current = clusters[i];
         }
     }
 
+    merged.push_back(current);
     return merged;
 }
 
 std::string toBinaryString(const Cluster& cluster) {
-    int stripNumber = cluster.globalStart / STRIP_SIZE + 1;
-    int startPosition = cluster.globalStart % STRIP_SIZE;
-    int size = cluster.globalEnd - cluster.globalStart + 1;
-
-    std::bitset<4> binaryStrip(stripNumber);
-    std::bitset<8> binaryStart(startPosition);
-    std::bitset<3> binarySize(size - 1); // Size in binary is actual size - 1
+    std::bitset<4> binaryStrip(cluster.stripNumber);
+    std::bitset<8> binaryStart(cluster.startPosition);
+    std::bitset<3> binarySize(cluster.size - 1); // Size in binary is actual size - 1
 
     return "0" + binaryStrip.to_string() + binaryStart.to_string() + binarySize.to_string();
 }

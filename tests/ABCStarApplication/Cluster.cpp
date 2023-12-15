@@ -7,6 +7,7 @@
 const int STRIP_SIZE = 126;
 
 struct Cluster {
+    int stripNumber;
     int globalStart;
     int globalEnd;
 };
@@ -15,15 +16,17 @@ Cluster parseCluster(const std::string& binary) {
     std::bitset<16> bits(binary);
     int stripNumber = (bits >> 11).to_ulong();
     int startPosition = ((bits << 5) >> 8).to_ulong();
-    int size = ((bits << 13) >> 13).to_ulong() + 1;
+    int size = ((bits << 13) >> 13).to_ulong() + 1; // Size is 1-based
 
     int globalStart = (stripNumber - 1) * STRIP_SIZE + startPosition;
     int globalEnd = globalStart + size - 1;
 
-    return {globalStart, globalEnd};
+    return {stripNumber, globalStart, globalEnd};
 }
 
 std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
+    if (clusters.empty()) return {};
+
     std::sort(clusters.begin(), clusters.end(), [](const Cluster& a, const Cluster& b) {
         return a.globalStart < b.globalStart;
     });
@@ -47,7 +50,7 @@ std::string toBinaryString(const Cluster& cluster) {
 
     std::bitset<4> binaryStrip(stripNumber);
     std::bitset<8> binaryStart(startPosition);
-    std::bitset<3> binarySize(size - 1);
+    std::bitset<3> binarySize(size - 1); // Size in binary is actual size - 1
 
     return "0" + binaryStrip.to_string() + binaryStart.to_string() + binarySize.to_string();
 }

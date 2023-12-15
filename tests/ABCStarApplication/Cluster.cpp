@@ -7,54 +7,49 @@
 const int STRIP_SIZE = 126;
 
 struct Cluster {
-    int stripNumber;
-    int startPosition;
-    int size;
+    int globalStart;
+    int globalEnd;
 };
 
 Cluster parseCluster(const std::string& binary) {
     std::bitset<16> bits(binary);
     int stripNumber = (bits >> 11).to_ulong();
     int startPosition = ((bits << 5) >> 8).to_ulong();
-    int size = ((bits << 13) >> 13).to_ulong() + 1; // Size is 1-based
+    int size = ((bits << 13) >> 13).to_ulong() + 1;
 
-    return {stripNumber, startPosition, size};
-}
+    int globalStart = (stripNumber - 1) * STRIP_SIZE + startPosition;
+    int globalEnd = globalStart + size - 1;
 
-std::string toBinaryString(const Cluster& cluster) {
-    std::bitset<4> stripNumber(cluster.stripNumber);
-    std::bitset<8> startPosition(cluster.startPosition);
-    std::bitset<3> size(cluster.size - 1); // Size in binary is actual size - 1
-
-    return "0" + stripNumber.to_string() + startPosition.to_string() + size.to_string();
+    return {globalStart, globalEnd};
 }
 
 std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
-    if (clusters.empty()) return {};
-
-    // Sort clusters by strip number and start position
     std::sort(clusters.begin(), clusters.end(), [](const Cluster& a, const Cluster& b) {
-        return a.stripNumber < b.stripNumber || (a.stripNumber == b.stripNumber && a.startPosition < b.startPosition);
+        return a.globalStart < b.globalStart;
     });
 
     std::vector<Cluster> merged;
-    Cluster current = clusters[0];
-
-    for (size_t i = 1; i < clusters.size(); ++i) {
-        int currentEnd = current.startPosition + current.size - 1;
-        int nextStart = clusters[i].startPosition;
-
-        if (current.stripNumber == clusters[i].stripNumber && currentEnd + 1 == nextStart) {
-            // Merge adjacent clusters
-            current.size += clusters[i].size;
+    for (const auto& cluster : clusters) {
+        if (!merged.empty() && merged.back().globalEnd + 1 >= cluster.globalStart) {
+            merged.back().globalEnd = std::max(merged.back().globalEnd, cluster.globalEnd);
         } else {
-            merged.push_back(current);
-            current = clusters[i];
+            merged.push_back(cluster);
         }
     }
 
-    merged.push_back(current);
     return merged;
+}
+
+std::string toBinaryString(const Cluster& cluster) {
+    int stripNumber = cluster.globalStart / STRIP_SIZE + 1;
+    int startPosition = cluster.globalStart % STRIP_SIZE;
+    int size = cluster.globalEnd - cluster.globalStart + 1;
+
+    std::bitset<4> binaryStrip(stripNumber);
+    std::bitset<8> binaryStart(startPosition);
+    std::bitset<3> binarySize(size - 1);
+
+    return "0" + binaryStrip.to_string() + binaryStart.to_string() + binarySize.to_string();
 }
 
 int main() {

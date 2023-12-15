@@ -3,7 +3,6 @@
 #include <bitset>
 #include <algorithm>
 #include <string>
-#include <set>
 
 const int STRIP_SIZE = 126;
 
@@ -31,40 +30,30 @@ std::string toBinaryString(const Cluster& cluster) {
 }
 
 std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
-    std::set<int> hits;
+    if (clusters.empty()) return {};
 
-    for (const auto& cluster : clusters) {
-        int globalStart = (cluster.stripNumber - 1) * STRIP_SIZE + cluster.startPosition;
-        for (int i = 0; i < cluster.size; ++i) {
-            hits.insert(globalStart + i);
-        }
-    }
+    // Sort clusters by strip number and start position
+    std::sort(clusters.begin(), clusters.end(), [](const Cluster& a, const Cluster& b) {
+        return a.stripNumber < b.stripNumber || (a.stripNumber == b.stripNumber && a.startPosition < b.startPosition);
+    });
 
     std::vector<Cluster> merged;
-    int currentStrip = 0, currentStart = -1, currentSize = 0;
+    Cluster current = clusters[0];
 
-    for (int hit : hits) {
-        int strip = hit / STRIP_SIZE + 1;
-        int position = hit % STRIP_SIZE;
+    for (size_t i = 1; i < clusters.size(); ++i) {
+        int currentEnd = current.startPosition + current.size - 1;
+        int nextStart = clusters[i].startPosition;
 
-        if (currentStart == -1) {
-            currentStrip = strip;
-            currentStart = position;
-            currentSize = 1;
-        } else if (strip == currentStrip && position == currentStart + currentSize) {
-            currentSize++;
+        if (current.stripNumber == clusters[i].stripNumber && currentEnd + 1 == nextStart) {
+            // Merge adjacent clusters
+            current.size += clusters[i].size;
         } else {
-            merged.push_back({currentStrip, currentStart, currentSize});
-            currentStrip = strip;
-            currentStart = position;
-            currentSize = 1;
+            merged.push_back(current);
+            current = clusters[i];
         }
     }
 
-    if (currentSize > 0) {
-        merged.push_back({currentStrip, currentStart, currentSize});
-    }
-
+    merged.push_back(current);
     return merged;
 }
 

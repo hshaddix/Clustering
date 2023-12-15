@@ -3,6 +3,7 @@
 #include <bitset>
 #include <algorithm>
 #include <string>
+#include <set>
 
 const int STRIP_SIZE = 126;
 
@@ -29,32 +30,41 @@ std::string toBinaryString(const Cluster& cluster) {
     return "0" + stripNumber.to_string() + startPosition.to_string() + size.to_string();
 }
 
-std::vector<Cluster> mergeClusters(std::vector<Cluster> clusters) {
-    if (clusters.empty()) return {};
+std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
+    std::set<int> hits;
 
-    std::sort(clusters.begin(), clusters.end(), [](const Cluster& a, const Cluster& b) {
-        return a.stripNumber * STRIP_SIZE + a.startPosition < b.stripNumber * STRIP_SIZE + b.startPosition;
-    });
-
-    std::vector<Cluster> merged;
-    Cluster current = clusters[0];
-
-    for (size_t i = 1; i < clusters.size(); ++i) {
-        // Calculate global end of current and global start of next
-        int currentEndGlobal = (current.stripNumber - 1) * STRIP_SIZE + current.startPosition + current.size - 1;
-        int nextStartGlobal = (clusters[i].stripNumber - 1) * STRIP_SIZE + clusters[i].startPosition;
-
-        if (currentEndGlobal >= nextStartGlobal) {
-            // Merge clusters
-            int newEndGlobal = (clusters[i].stripNumber - 1) * STRIP_SIZE + clusters[i].startPosition + clusters[i].size - 1;
-            current.size = newEndGlobal - ((current.stripNumber - 1) * STRIP_SIZE + current.startPosition) + 1;
-        } else {
-            merged.push_back(current);
-            current = clusters[i];
+    for (const auto& cluster : clusters) {
+        int globalStart = (cluster.stripNumber - 1) * STRIP_SIZE + cluster.startPosition;
+        for (int i = 0; i < cluster.size; ++i) {
+            hits.insert(globalStart + i);
         }
     }
 
-    merged.push_back(current);
+    std::vector<Cluster> merged;
+    int currentStrip = 0, currentStart = -1, currentSize = 0;
+
+    for (int hit : hits) {
+        int strip = hit / STRIP_SIZE + 1;
+        int position = hit % STRIP_SIZE;
+
+        if (currentStart == -1) {
+            currentStrip = strip;
+            currentStart = position;
+            currentSize = 1;
+        } else if (strip == currentStrip && position == currentStart + currentSize) {
+            currentSize++;
+        } else {
+            merged.push_back({currentStrip, currentStart, currentSize});
+            currentStrip = strip;
+            currentStart = position;
+            currentSize = 1;
+        }
+    }
+
+    if (currentSize > 0) {
+        merged.push_back({currentStrip, currentStart, currentSize});
+    }
+
     return merged;
 }
 

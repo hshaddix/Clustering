@@ -14,8 +14,8 @@ struct Cluster {
 Cluster parseCluster(const std::string& binary) {
     std::bitset<16> bits(binary);
     int stripNumber = (bits >> 11).to_ulong();
-    int startPosition = ((bits << 4) >> 8).to_ulong();
-    int size = (bits & 0b111).to_ulong() + 1;
+    int startPosition = ((bits << 5) >> 8).to_ulong();
+    int size = ((bits << 13) >> 13).to_ulong() + 1;  // Size is 1-based
 
     return {stripNumber, startPosition, size};
 }
@@ -33,7 +33,8 @@ std::vector<Cluster> mergeClusters(std::vector<Cluster> clusters) {
             int currentGlobalStart = c.stripNumber * STRIP_SIZE + c.startPosition;
 
             if (lastGlobalEnd >= currentGlobalStart) {
-                last.size = currentGlobalStart + c.size - last.startPosition - (last.stripNumber * STRIP_SIZE);
+                int newEnd = c.stripNumber * STRIP_SIZE + c.startPosition + c.size - 1;
+                last.size = newEnd - (last.stripNumber * STRIP_SIZE + last.startPosition) + 1;
                 continue;
             }
         }

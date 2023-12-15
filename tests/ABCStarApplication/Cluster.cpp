@@ -32,7 +32,6 @@ std::string toBinaryString(const Cluster& cluster) {
 std::vector<Cluster> mergeClusters(std::vector<Cluster> clusters) {
     if (clusters.empty()) return {};
 
-    // Sort clusters by global start position
     std::sort(clusters.begin(), clusters.end(), [](const Cluster& a, const Cluster& b) {
         return a.stripNumber * STRIP_SIZE + a.startPosition < b.stripNumber * STRIP_SIZE + b.startPosition;
     });
@@ -41,13 +40,14 @@ std::vector<Cluster> mergeClusters(std::vector<Cluster> clusters) {
     Cluster current = clusters[0];
 
     for (size_t i = 1; i < clusters.size(); ++i) {
-        int currentEnd = current.stripNumber * STRIP_SIZE + current.startPosition + current.size;
-        int nextStart = clusters[i].stripNumber * STRIP_SIZE + clusters[i].startPosition;
+        // Calculate global end of current and global start of next
+        int currentEndGlobal = (current.stripNumber - 1) * STRIP_SIZE + current.startPosition + current.size - 1;
+        int nextStartGlobal = (clusters[i].stripNumber - 1) * STRIP_SIZE + clusters[i].startPosition;
 
-        if (currentEnd >= nextStart) {
-            // Extend the current cluster to include the next one
-            int newEnd = clusters[i].stripNumber * STRIP_SIZE + clusters[i].startPosition + clusters[i].size;
-            current.size = newEnd - (current.stripNumber * STRIP_SIZE + current.startPosition);
+        if (currentEndGlobal >= nextStartGlobal) {
+            // Merge clusters
+            int newEndGlobal = (clusters[i].stripNumber - 1) * STRIP_SIZE + clusters[i].startPosition + clusters[i].size - 1;
+            current.size = newEndGlobal - ((current.stripNumber - 1) * STRIP_SIZE + current.startPosition) + 1;
         } else {
             merged.push_back(current);
             current = clusters[i];

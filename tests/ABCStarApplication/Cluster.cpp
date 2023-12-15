@@ -45,7 +45,9 @@ std::vector<Cluster> mergeClusters(std::vector<Cluster> clusters) {
         int nextStart = clusters[i].stripNumber * STRIP_SIZE + clusters[i].startPosition;
 
         if (currentEnd >= nextStart) {
-            current.size = (clusters[i].stripNumber * STRIP_SIZE + clusters[i].startPosition + clusters[i].size) - (current.stripNumber * STRIP_SIZE + current.startPosition);
+            // Extend the current cluster to include the next one
+            int newEnd = clusters[i].stripNumber * STRIP_SIZE + clusters[i].startPosition + clusters[i].size;
+            current.size = newEnd - (current.stripNumber * STRIP_SIZE + current.startPosition);
         } else {
             merged.push_back(current);
             current = clusters[i];

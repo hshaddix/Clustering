@@ -1,77 +1,65 @@
 #include <iostream>
 #include <vector>
 #include <bitset>
+#include <algorithm>
 #include <string>
 
-const int BITS_FOR_ABCSTAR = 4;
-const int BITS_FOR_CHANNEL = 8;
-const int BITS_FOR_NEXT_STRIPS = 3;
-const int TOTAL_BITS = 16;
+const int STRIP_SIZE = 126;
 
 struct Cluster {
-    int abcstarNumber;
-    int startStrip;
-    int length;
+    int stripNumber;
+    int startPosition;
+    int size;
 };
 
-std::vector<Cluster> processClusters(const std::vector<std::string>& inputClusters);
-void printClusters(const std::vector<Cluster>& clusters);
+Cluster parseCluster(const std::string& binary) {
+    std::bitset<16> bits(binary);
+    int stripNumber = (bits >> 11).to_ulong();
+    int startPosition = ((bits << 4) >> 8).to_ulong();
+    int size = (bits & 0b111).to_ulong() + 1;  // Size is 1-based
+
+    return {stripNumber, startPosition, size};
+}
+
+std::vector<Cluster> mergeClusters(const std::vector<Cluster>& clusters) {
+    if (clusters.empty()) return {};
+
+    std::vector<Cluster> merged;
+    Cluster current = clusters[0];
+
+    for (size_t i = 1; i < clusters.size(); ++i) {
+        int globalEnd = current.stripNumber * STRIP_SIZE + current.startPosition + current.size - 1;
+        int globalStartNext = clusters[i].stripNumber * STRIP_SIZE + clusters[i].startPosition;
+
+        if (globalEnd >= globalStartNext) {
+            int newEnd = clusters[i].stripNumber * STRIP_SIZE + clusters[i].startPosition + clusters[i].size - 1;
+            current.size = newEnd - (current.stripNumber * STRIP_SIZE + current.startPosition) + 1;
+        } else {
+            merged.push_back(current);
+            current = clusters[i];
+        }
+    }
+
+    merged.push_back(current);
+    return merged;
+}
 
 int main() {
-    std::vector<std::string> inputClusters;
-    std::string clusterBinary;
+    std::string inputBinary;
+    std::vector<Cluster> clusters;
 
-    // Read input clusters in binary format
-    while (std::cin >> clusterBinary) {
-        inputClusters.push_back(clusterBinary);
+    while (std::cin >> inputBinary) {
+        clusters.push_back(parseCluster(inputBinary));
     }
 
-    auto processedClusters = processClusters(inputClusters);
-    printClusters(processedClusters);
+    std::sort(clusters.begin(), clusters.end(), [](const Cluster& a, const Cluster& b) { 
+        return a.stripNumber < b.stripNumber || (a.stripNumber == b.stripNumber && a.startPosition < b.startPosition); 
+    });
+
+    auto mergedClusters = mergeClusters(clusters);
+    for (const auto& cluster : mergedClusters) {
+        std::cout << "Strip " << cluster.stripNumber << ": Start " << cluster.startPosition << ", Size " << cluster.size << std::endl;
+    }
 
     return 0;
-}
-
-std::vector<Cluster> processClusters(const std::vector<std::string>& inputClusters) {
-    std::vector<Cluster> processedClusters;
-    Cluster currentCluster;
-    bool isFirstCluster = true;
-
-    for (const auto& clusterBinary : inputClusters) {
-        std::bitset<TOTAL_BITS> clusterBits(clusterBinary);
-        int abcstarNumber = (clusterBits >> (BITS_FOR_CHANNEL + BITS_FOR_NEXT_STRIPS)).to_ulong();
-        int startStrip = ((clusterBits << BITS_FOR_ABCSTAR) >> (BITS_FOR_ABCSTAR + BITS_FOR_NEXT_STRIPS)).to_ulong();
-        int nextStrips = (clusterBits & std::bitset<TOTAL_BITS>(0b111)).to_ulong();
-
-        int length = 1; // First strip is always hit
-        for (int i = 0; i < BITS_FOR_NEXT_STRIPS; ++i) {
-            if (nextStrips & (1 << (BITS_FOR_NEXT_STRIPS - 1 - i))) {
-                length++;
-            }
-        }
-
-        if (isFirstCluster || currentCluster.abcstarNumber != abcstarNumber || currentCluster.startStrip + currentCluster.length != startStrip) {
-            if (!isFirstCluster) {
-                processedClusters.push_back(currentCluster);
-            }
-            currentCluster = {abcstarNumber, startStrip, length};
-            isFirstCluster = false;
-        } else {
-            currentCluster.length += length;
-        }
-    }
-
-    if (!isFirstCluster) {
-        processedClusters.push_back(currentCluster);
-    }
-
-    return processedClusters;
-}
-
-void printClusters(const std::vector<Cluster>& clusters) {
-    for (const auto& cluster : clusters) {
-        std::cout << "ABCstar Number: " << cluster.abcstarNumber
-                  << ", Start Strip: " << cluster.startStrip
-                  << ", Length: " << cluster.length << std::endl;
-    }
 }

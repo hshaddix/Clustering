@@ -18,12 +18,16 @@ Cluster parseCluster(const std::string& binary) {
     std::bitset<16> bits(binary);
     int stripNumber = (bits >> 11).to_ulong();
     int startPosition = ((bits << 5) >> 8).to_ulong();
-    int size = ((bits << 13) >> 13).to_ulong() + 1; // Size is 1-based
+    int size = ((bits << 13) >> 13).to_ulong() + 1;
 
-    int globalStart = (stripNumber - 1) * STRIP_SIZE + startPosition;
+    int globalStart = stripNumber * STRIP_SIZE + startPosition;
     int globalEnd = globalStart + size - 1;
 
     return {stripNumber, startPosition, size, globalStart, globalEnd};
+}
+
+bool areAdjacent(const Cluster& a, const Cluster& b) {
+    return a.globalEnd + 1 == b.globalStart;
 }
 
 std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
@@ -37,10 +41,11 @@ std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
     Cluster current = clusters[0];
 
     for (size_t i = 1; i < clusters.size(); ++i) {
-        if (current.globalEnd + 1 == clusters[i].globalStart) {
-            // Merge adjacent clusters
+        if (areAdjacent(current, clusters[i])) {
             current.globalEnd = clusters[i].globalEnd;
             current.size = current.globalEnd - current.globalStart + 1;
+            current.stripNumber = (current.globalStart / STRIP_SIZE);
+            current.startPosition = current.globalStart % STRIP_SIZE;
         } else {
             merged.push_back(current);
             current = clusters[i];
@@ -54,7 +59,7 @@ std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
 std::string toBinaryString(const Cluster& cluster) {
     std::bitset<4> binaryStrip(cluster.stripNumber);
     std::bitset<8> binaryStart(cluster.startPosition);
-    std::bitset<3> binarySize(cluster.size - 1); // Size in binary is actual size - 1
+    std::bitset<3> binarySize(cluster.size - 1);
 
     return "0" + binaryStrip.to_string() + binaryStart.to_string() + binarySize.to_string();
 }

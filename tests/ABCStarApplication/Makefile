@@ -4,21 +4,21 @@ TARGET = Cluster
 
 all: $(TARGET)
 
-$(TARGET): $(TARGET).o
-    $(CXX) $(CXXFLAGS) $(TARGET).o -o $(TARGET)
+$(TARGET): Cluster.o
+\t$(CXX) $(CXXFLAGS) Cluster.o -o $(TARGET)
 
-$(TARGET).o: $(TARGET).cpp
-    $(CXX) $(CXXFLAGS) -c $(TARGET).cpp
+Cluster.o: Cluster.cpp
+\t$(CXX) $(CXXFLAGS) -c Cluster.cpp
 
 run_test1:
-    @echo "Running test 1 (merging on same strip):"
-    @echo "0001001100100011 0001001101100001" | ./$(TARGET)
+\t@echo "Running test 1 (merging on same strip):"
+\t@./$(TARGET) <<< "0000000110010001 0000000110100100"
 
 run_test2:
-    @echo "Running test 2 (merging across strip boundaries):"
-    @echo "0001011110110010 0010000000000001" | ./$(TARGET)
+\t@echo "Running test 2 (merging across strip boundaries):"
+\t@./$(TARGET) <<< "0000011111100001 0001000000000001"
 
 clean:
-    rm -f $(TARGET) $(TARGET).o
+\trm -f $(TARGET) Cluster.o
 
 .PHONY: all clean run_test1 run_test2

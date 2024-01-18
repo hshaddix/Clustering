@@ -27,6 +27,10 @@ Cluster parseCluster(const std::string& binary) {
 }
 
 bool areAdjacent(const Cluster& a, const Cluster& b) {
+    if (a.stripNumber != b.stripNumber) {
+        // Check for adjacency at the strip boundary
+        return a.stripNumber + 1 == b.stripNumber && a.globalEnd % STRIP_SIZE == STRIP_SIZE - 1 && b.startPosition == 0;
+    }
     return a.globalEnd + 1 == b.globalStart;
 }
 
@@ -42,7 +46,7 @@ std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
 
     for (size_t i = 1; i < clusters.size(); ++i) {
         if (areAdjacent(current, clusters[i])) {
-            current.size += clusters[i].size; // Extend the size of the current cluster
+            current.size += clusters[i].size; // Sum the sizes
             current.globalEnd = current.globalStart + current.size - 1;
         } else {
             merged.push_back(current);

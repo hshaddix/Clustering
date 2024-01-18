@@ -1,74 +1,83 @@
 #include <iostream>
 #include <vector>
-#include <sstream>
-#include <iomanip>
+#include <bitset>
+#include <algorithm>
+#include <string>
+
+const int STRIP_SIZE = 126;
 
 struct Cluster {
     int stripNumber;
     int startPosition;
     int size;
-
-    // Constructor for easy initialization
-    Cluster(int strip, int start, int sz) : stripNumber(strip), startPosition(start), size(sz) {}
-
-    // Helper function to calculate the global position
-    int globalPosition() const {
-        return stripNumber * 126 + startPosition;
-    }
-
-    // Convert cluster data to 16-bit format
-    unsigned int to16BitFormat() const {
-        return (stripNumber << 11) | (startPosition << 3) | size;
-    }
+    int globalStart;
+    int globalEnd;
 };
 
-// Function to parse input string into Cluster objects
-std::vector<Cluster> parseInput(const std::string& input) {
-    std::vector<Cluster> clusters;
-    std::istringstream iss(input);
-    unsigned int value;
+Cluster parseCluster(const std::string& binary) {
+    std::bitset<16> bits(binary);
+    int stripNumber = (bits >> 11).to_ulong();
+    int startPosition = ((bits << 5) >> 8).to_ulong();
+    int size = ((bits << 13) >> 13).to_ulong() + 1;
 
-    while (iss >> std::hex >> value) {
-        int strip = (value >> 11) & 0xF;
-        int start = (value >> 3) & 0xFF;
-        int size = value & 0x7;
-        clusters.emplace_back(strip, start, size);
-    }
+    int globalStart = stripNumber * STRIP_SIZE + startPosition;
+    int globalEnd = globalStart + size - 1;
 
-    return clusters;
+    return {stripNumber, startPosition, size, globalStart, globalEnd};
 }
 
-// Function to merge clusters if adjacent
-std::vector<Cluster> mergeClusters(const std::vector<Cluster>& clusters) {
-    std::vector<Cluster> merged;
-    if (clusters.empty()) return merged;
+bool areAdjacent(const Cluster& a, const Cluster& b) {
+    if (a.stripNumber != b.stripNumber) {
+        // Adjusting for adjacency at the strip boundary
+        return a.globalEnd + 1 == b.globalStart;
+    }
+    return a.globalEnd + 1 == b.globalStart;
+}
 
+std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
+    if (clusters.empty()) return {};
+
+    std::sort(clusters.begin(), clusters.end(), [](const Cluster& a, const Cluster& b) {
+        return a.globalStart < b.globalStart;
+    });
+
+    std::vector<Cluster> merged;
     Cluster current = clusters[0];
+
     for (size_t i = 1; i < clusters.size(); ++i) {
-        if (clusters[i].globalPosition() == current.globalPosition() + current.size) {
-            current.size += clusters[i].size; // Extend the current cluster
+        if (areAdjacent(current, clusters[i])) {
+            current.size += clusters[i].size; // Merge clusters and sum their sizes
+            current.globalEnd = current.globalStart + current.size - 1;
         } else {
-            merged.push_back(current); // Save the current cluster
+            merged.push_back(current);
             current = clusters[i];
         }
     }
-    merged.push_back(current); // Add the last cluster
 
+    merged.push_back(current);
     return merged;
 }
 
-// Main function
+std::string toBinaryString(const Cluster& cluster) {
+    std::bitset<4> binaryStrip(cluster.stripNumber);
+    std::bitset<8> binaryStart(cluster.startPosition);
+    std::bitset<3> binarySize(cluster.size - 1);
+
+    return "0" + binaryStrip.to_string() + binaryStart.to_string() + binarySize.to_string();
+}
+
 int main() {
-    std::string input;
-    std::getline(std::cin, input);
+    std::string binary;
+    std::vector<Cluster> clusters;
 
-    std::vector<Cluster> clusters = parseInput(input);
-    std::vector<Cluster> mergedClusters = mergeClusters(clusters);
-
-    for (const auto& cluster : mergedClusters) {
-        std::cout << std::hex << std::setw(4) << std::setfill('0') << cluster.to16BitFormat() << " ";
+    while (std::cin >> binary) {
+        clusters.push_back(parseCluster(binary));
     }
-    std::cout << std::endl;
+
+    auto mergedClusters = mergeClusters(clusters);
+    for (const auto& cluster : mergedClusters) {
+        std::cout << toBinaryString(cluster) << std::endl;
+    }
 
     return 0;
 }

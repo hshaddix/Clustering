@@ -27,9 +27,9 @@ Cluster parseCluster(const std::string& binary) {
 }
 
 bool areAdjacent(const Cluster& a, const Cluster& b) {
+    // Check adjacency across strip boundaries
     if (a.stripNumber != b.stripNumber) {
-        // Check for adjacency at the strip boundary
-        return a.stripNumber + 1 == b.stripNumber && a.globalEnd % STRIP_SIZE == STRIP_SIZE - 1 && b.startPosition == 0;
+        return a.globalEnd + 1 == b.globalStart;
     }
     return a.globalEnd + 1 == b.globalStart;
 }

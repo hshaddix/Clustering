@@ -20,6 +20,7 @@ Cluster parseCluster(const std::string& binary) {
     int startPosition = ((bits << 5) >> 8).to_ulong();
     int size = ((bits << 13) >> 13).to_ulong() + 1;
 
+    // Calculate global positions with offset
     int globalStart = stripNumber * STRIP_SIZE + startPosition;
     int globalEnd = globalStart + size - 1;
 
@@ -27,6 +28,7 @@ Cluster parseCluster(const std::string& binary) {
 }
 
 bool areAdjacent(const Cluster& a, const Cluster& b) {
+    // Adjust to handle adjacency at the strip boundary
     if (a.stripNumber != b.stripNumber) {
         return (a.globalEnd + 1) % STRIP_SIZE == b.startPosition;
     }
@@ -37,11 +39,12 @@ std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
     if (clusters.empty()) return {};
 
     std::sort(clusters.begin(), clusters.end(), [](const Cluster& a, const Cluster& b) {
-        return a.globalEnd < b.globalEnd;
+        return a.globalStart < b.globalStart;
     });
 
     std::vector<Cluster> merged;
     Cluster current = clusters[0];
+    int offset = 0;  // Initialize the offset
 
     for (size_t i = 1; i < clusters.size(); ++i) {
         if (areAdjacent(current, clusters[i])) {
@@ -50,11 +53,32 @@ std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
             current.globalEnd = current.globalStart + current.size - 1;
         } else {
             merged.push_back(current);
+
+            // Adjust the global positions with the offset
+            current.globalStart += offset * STRIP_SIZE;
+            current.globalEnd += offset * STRIP_SIZE;
+
+            // Check if clusters span multiple strips
+            if (current.globalEnd >= STRIP_SIZE) {
+                // Calculate the new offset
+                offset += 1;
+
+                // Adjust the global positions again
+                current.globalStart -= STRIP_SIZE;
+                current.globalEnd -= STRIP_SIZE;
+            }
+
             current = clusters[i];
         }
     }
 
+    // Add the last cluster
     merged.push_back(current);
+
+    // Adjust the global positions of the last cluster with the final offset
+    current.globalStart += offset * STRIP_SIZE;
+    current.globalEnd += offset * STRIP_SIZE;
+
     return merged;
 }
 

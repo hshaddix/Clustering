@@ -12,11 +12,11 @@ Cluster.o: Cluster.cpp
 
 run_test1:
 	@echo "Running test 1 (merging on same strip):"
-	@./$(TARGET) <<< "0000000110010001 0000000110100100"
+	@./$(TARGET) <<< "0000001100110010 0000001100110100"
 
 run_test2:
 	@echo "Running test 2 (merging across strip boundaries):"
-	@./$(TARGET) <<< "0000011111100001 0001000000000001"
+	@./$(TARGET) <<< "0000011111110001 0001000000000001"
 
 clean:
 	rm -f $(TARGET) Cluster.o

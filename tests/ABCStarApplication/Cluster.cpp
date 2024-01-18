@@ -1,81 +1,74 @@
 #include <iostream>
 #include <vector>
-#include <bitset>
-#include <algorithm>
-#include <string>
-
-const int STRIP_SIZE = 126;
+#include <sstream>
+#include <iomanip>
 
 struct Cluster {
     int stripNumber;
     int startPosition;
     int size;
-    int globalStart;
-    int globalEnd;
+
+    // Constructor for easy initialization
+    Cluster(int strip, int start, int sz) : stripNumber(strip), startPosition(start), size(sz) {}
+
+    // Helper function to calculate the global position
+    int globalPosition() const {
+        return stripNumber * 126 + startPosition;
+    }
+
+    // Convert cluster data to 16-bit format
+    unsigned int to16BitFormat() const {
+        return (stripNumber << 11) | (startPosition << 3) | size;
+    }
 };
 
-Cluster parseCluster(const std::string& binary) {
-    std::bitset<16> bits(binary);
-    int stripNumber = (bits >> 11).to_ulong();
-    int startPosition = ((bits << 5) >> 8).to_ulong();
-    int size = ((bits << 13) >> 13).to_ulong() + 1;
+// Function to parse input string into Cluster objects
+std::vector<Cluster> parseInput(const std::string& input) {
+    std::vector<Cluster> clusters;
+    std::istringstream iss(input);
+    unsigned int value;
 
-    int globalStart = stripNumber * STRIP_SIZE + startPosition;
-    int globalEnd = globalStart + size - 1;
+    while (iss >> std::hex >> value) {
+        int strip = (value >> 11) & 0xF;
+        int start = (value >> 3) & 0xFF;
+        int size = value & 0x7;
+        clusters.emplace_back(strip, start, size);
+    }
 
-    return {stripNumber, startPosition, size, globalStart, globalEnd};
+    return clusters;
 }
 
-bool areAdjacent(const Cluster& a, const Cluster& b) {
-    return a.globalEnd + 1 == b.globalStart;
-}
-
-std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
-    if (clusters.empty()) return {};
-
-    std::sort(clusters.begin(), clusters.end(), [](const Cluster& a, const Cluster& b) {
-        return a.globalStart < b.globalStart;
-    });
-
+// Function to merge clusters if adjacent
+std::vector<Cluster> mergeClusters(const std::vector<Cluster>& clusters) {
     std::vector<Cluster> merged;
-    Cluster current = clusters[0];
+    if (clusters.empty()) return merged;
 
+    Cluster current = clusters[0];
     for (size_t i = 1; i < clusters.size(); ++i) {
-        if (areAdjacent(current, clusters[i])) {
-            current.globalEnd = clusters[i].globalEnd;
-            current.size = current.globalEnd - current.globalStart + 1;
-            current.stripNumber = (current.globalStart / STRIP_SIZE);
-            current.startPosition = current.globalStart % STRIP_SIZE;
+        if (clusters[i].globalPosition() == current.globalPosition() + current.size) {
+            current.size += clusters[i].size; // Extend the current cluster
         } else {
-            merged.push_back(current);
+            merged.push_back(current); // Save the current cluster
             current = clusters[i];
         }
     }
+    merged.push_back(current); // Add the last cluster
 
-    merged.push_back(current);
     return merged;
 }
 
-std::string toBinaryString(const Cluster& cluster) {
-    std::bitset<4> binaryStrip(cluster.stripNumber);
-    std::bitset<8> binaryStart(cluster.startPosition);
-    std::bitset<3> binarySize(cluster.size - 1);
-
-    return "0" + binaryStrip.to_string() + binaryStart.to_string() + binarySize.to_string();
-}
-
+// Main function
 int main() {
-    std::string binary;
-    std::vector<Cluster> clusters;
+    std::string input;
+    std::getline(std::cin, input);
 
-    while (std::cin >> binary) {
-        clusters.push_back(parseCluster(binary));
-    }
+    std::vector<Cluster> clusters = parseInput(input);
+    std::vector<Cluster> mergedClusters = mergeClusters(clusters);
 
-    auto mergedClusters = mergeClusters(clusters);
     for (const auto& cluster : mergedClusters) {
-        std::cout << toBinaryString(cluster) << std::endl;
+        std::cout << std::hex << std::setw(4) << std::setfill('0') << cluster.to16BitFormat() << " ";
     }
+    std::cout << std::endl;
 
     return 0;
 }

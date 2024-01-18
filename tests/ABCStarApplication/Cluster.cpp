@@ -5,69 +5,65 @@
 
 const int STRIP_SIZE = 126;
 
-std::pair<int, int> calculate_global_if_from_local(int strip, int initial, int size) {
-    int global_initial = initial + strip * STRIP_SIZE;
-    int global_final = global_initial + size - 1;
-    return {global_initial, global_final};
+struct Cluster {
+    int stripNumber;
+    int startPosition;
+    int size;
+
+    int globalStart() const {
+        return stripNumber * STRIP_SIZE + startPosition;
+    }
+};
+
+Cluster parseCluster(const std::string& binary) {
+    std::bitset<16> bits(binary);
+    Cluster c;
+    c.stripNumber = (bits >> 12).to_ulong() & 0xF;     // Extracting bits 2-5
+    c.startPosition = (bits >> 4).to_ulong() & 0xFF;   // Extracting bits 6-13
+    c.size = (bits.to_ulong() & 0xF) + 1;              // Extracting bits 14-16 and adjusting size
+    return c;
 }
 
-std::pair<int, int, int> calculate_local_if_from_global(int global_initial, int global_final) {
-    int strip = global_initial / STRIP_SIZE;
-    int local_initial = global_initial % STRIP_SIZE;
-    int size = global_final - global_initial + 1;
-    return {strip, local_initial, size};
+bool areAdjacent(const Cluster& a, const Cluster& b) {
+    return a.globalStart() + a.size == b.globalStart();
 }
 
-std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int, int>>& clusters) {
-    std::vector<std::pair<int, int>> merged;
+std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
+    std::vector<Cluster> merged;
+    if (clusters.empty()) return merged;
 
-    for (size_t i = 0; i < clusters.size(); ++i) {
-        int current_i = clusters[i].first;
-        int current_f = clusters[i].second;
-
-        if (!merged.empty() && merged.back().second + 1 == current_i) {
-            merged.back().second = current_f; // Merge with previous cluster
+    Cluster current = clusters[0];
+    for (size_t i = 1; i < clusters.size(); ++i) {
+        if (areAdjacent(current, clusters[i])) {
+            current.size += clusters[i].size;
         } else {
-            merged.push_back({current_i, current_f});
+            merged.push_back(current);
+            current = clusters[i];
         }
     }
-
+    merged.push_back(current);
     return merged;
 }
 
-std::string format_output(int strip, int initial, int size) {
-    std::bitset<4> strip_bits(strip);
-    std::bitset<8> initial_bits(initial);
-    std::bitset<3> size_bits(size - 1); // size - 1, because size range is 1-8
-    return "0" + strip_bits.to_string() + initial_bits.to_string() + size_bits.to_string();
+std::string toBinaryString(const Cluster& cluster) {
+    std::bitset<4> strip(cluster.stripNumber);
+    std::bitset<8> start(cluster.startPosition);
+    std::bitset<3> size(cluster.size - 1);
+    return "0" + strip.to_string() + start.to_string() + size.to_string();
 }
 
 int main() {
-    std::vector<std::pair<int, int>> clusters;
-    std::string binary_input;
+    std::string binary;
+    std::vector<Cluster> clusters;
 
-    while (std::cin >> binary_input) {
-        if (binary_input == "0000000000000000") {
-            // Handle empty strip
-            std::cout << "0000000000000000 ";
-            continue;
-        }
-
-        int strip_number = std::stoi(binary_input.substr(1, 4), nullptr, 2);
-        int initial_hit = std::stoi(binary_input.substr(5, 8), nullptr, 2);
-        int size = std::stoi(binary_input.substr(13, 3), nullptr, 2);
-
-        auto cluster = calculate_global_if_from_local(strip_number, initial_hit, size);
-        clusters.push_back(cluster);
+    while (std::cin >> binary) {
+        clusters.push_back(parseCluster(binary));
     }
 
-    auto merged_clusters = merge_clusters(clusters);
-
-    for (const auto& cluster : merged_clusters) {
-        auto [strip, local_initial, size] = calculate_local_if_from_global(cluster.first, cluster.second);
-        std::cout << format_output(strip, local_initial, size) << " ";
+    auto mergedClusters = mergeClusters(clusters);
+    for (const auto& cluster : mergedClusters) {
+        std::cout << toBinaryString(cluster) << std::endl;
     }
-    std::cout << std::endl;
 
     return 0;
 }

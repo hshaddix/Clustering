@@ -1,83 +1,59 @@
 #include <iostream>
 #include <vector>
 #include <bitset>
-#include <algorithm>
 #include <string>
 
 const int STRIP_SIZE = 126;
 
-struct Cluster {
-    int stripNumber;
-    int startPosition;
-    int size;
-    int globalStart;
-    int globalEnd;
-};
-
-Cluster parseCluster(const std::string& binary) {
-    std::bitset<16> bits(binary);
-    int stripNumber = (bits >> 11).to_ulong();
-    int startPosition = ((bits << 5) >> 8).to_ulong();
-    int size = ((bits << 13) >> 13).to_ulong() + 1;
-
-    int globalStart = stripNumber * STRIP_SIZE + startPosition;
-    int globalEnd = globalStart + size - 1;
-
-    return {stripNumber, startPosition, size, globalStart, globalEnd};
+std::pair<int, int> calculate_if_from_initial_size(int initial, int size) {
+    int f = initial + size - 1;
+    return {initial, f};
 }
 
-bool areAdjacent(const Cluster& a, const Cluster& b) {
-    // Check adjacency across strip boundaries
-    if (a.stripNumber != b.stripNumber) {
-        return a.globalEnd + 1 == b.globalStart;
-    }
-    return a.globalEnd + 1 == b.globalStart;
-}
+std::vector<std::pair<int, int>> merge_clusters(const std::vector<std::pair<int, int>>& clusters) {
+    std::vector<std::pair<int, int>> merged;
 
-std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
-    if (clusters.empty()) return {};
+    for (size_t i = 0; i < clusters.size(); ++i) {
+        int current_i = clusters[i].first;
+        int current_f = clusters[i].second;
 
-    std::sort(clusters.begin(), clusters.end(), [](const Cluster& a, const Cluster& b) {
-        return a.globalStart < b.globalStart;
-    });
-
-    std::vector<Cluster> merged;
-    Cluster current = clusters[0];
-
-    for (size_t i = 1; i < clusters.size(); ++i) {
-        if (areAdjacent(current, clusters[i])) {
-            current.size += clusters[i].size; // Sum the sizes
-            current.globalEnd = current.globalStart + current.size - 1;
+        if (!merged.empty() && merged.back().second + 1 == current_i) {
+            merged.back().second = current_f; // Merge with previous cluster
         } else {
-            merged.push_back(current);
-            current = clusters[i];
+            merged.push_back({current_i, current_f});
         }
     }
 
-    merged.push_back(current);
     return merged;
 }
 
-std::string toBinaryString(const Cluster& cluster) {
-    std::bitset<4> binaryStrip(cluster.stripNumber);
-    std::bitset<8> binaryStart(cluster.startPosition);
-    std::bitset<3> binarySize(cluster.size - 1);
-
-    return "0" + binaryStrip.to_string() + binaryStart.to_string() + binarySize.to_string();
-}
-
 int main() {
-    std::string binary;
-    std::vector<Cluster> clusters;
+    std::vector<std::pair<int, int>> clusters;
+    std::string binary_input;
 
-    while (std::cin >> binary) {
-        clusters.push_back(parseCluster(binary));
+    while (std::cin >> binary_input) {
+        if (binary_input == "0000000000000000") {
+            // Handle empty strip
+            continue;
+        }
+
+        int strip_number = std::stoi(binary_input.substr(1, 4), nullptr, 2);
+        int initial_hit = std::stoi(binary_input.substr(5, 8), nullptr, 2);
+        int size = std::stoi(binary_input.substr(13, 3), nullptr, 2);
+
+        auto cluster = calculate_if_from_initial_size(initial_hit + strip_number * STRIP_SIZE, size);
+        clusters.push_back(cluster);
     }
 
-    auto mergedClusters = mergeClusters(clusters);
-    for (const auto& cluster : mergedClusters) {
-        std::cout << toBinaryString(cluster) << std::endl;
+    auto merged_clusters = merge_clusters(clusters);
+
+    for (const auto& cluster : merged_clusters) {
+        int initial = cluster.first;
+        int final = cluster.second;
+        int size = final - initial + 1;
+        std::cout << "{" << initial << "," << size << "} ";
     }
+    std::cout << std::endl;
 
     return 0;
 }

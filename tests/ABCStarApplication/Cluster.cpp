@@ -10,22 +10,28 @@ struct Cluster {
     int startPosition;
     int size;
 
-    int globalStart() const {
-        return stripNumber * STRIP_SIZE + startPosition;
+    // Calculate the global end position for adjacency check
+    int globalEnd() const {
+        return stripNumber * STRIP_SIZE + startPosition + size - 1;
     }
 };
 
 Cluster parseCluster(const std::string& binary) {
     std::bitset<16> bits(binary);
     Cluster c;
-    c.stripNumber = (bits >> 12).to_ulong() & 0xF;     // Extracting bits 2-5
-    c.startPosition = (bits >> 4).to_ulong() & 0xFF;   // Extracting bits 6-13
-    c.size = (bits.to_ulong() & 0xF) + 1;              // Extracting bits 14-16 and adjusting size
+    c.stripNumber = (bits >> 12).to_ulong() & 0xF;      // Extracting bits 2-5
+    c.startPosition = (bits >> 4).to_ulong() & 0xFF;    // Extracting bits 6-13
+    c.size = (bits.to_ulong() & 0xF) + 1;               // Extracting bits 14-16 and adjusting size
     return c;
 }
 
 bool areAdjacent(const Cluster& a, const Cluster& b) {
-    return a.globalStart() + a.size == b.globalStart();
+    // Check for adjacency, including across strip boundaries
+    if (a.stripNumber == b.stripNumber) {
+        return a.globalEnd() == b.startPosition - 1;
+    } else {
+        return a.globalEnd() == STRIP_SIZE - 1 && b.stripNumber == a.stripNumber + 1 && b.startPosition == 0;
+    }
 }
 
 std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
@@ -35,6 +41,7 @@ std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
     Cluster current = clusters[0];
     for (size_t i = 1; i < clusters.size(); ++i) {
         if (areAdjacent(current, clusters[i])) {
+            // Merge clusters: extend the size of the current cluster
             current.size += clusters[i].size;
         } else {
             merged.push_back(current);

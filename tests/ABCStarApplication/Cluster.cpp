@@ -18,12 +18,11 @@ Cluster parseCluster(const std::string& binary) {
     std::bitset<16> bits(binary);
     int stripNumber = (bits >> 11).to_ulong();
     int startPosition = ((bits << 5) >> 8).to_ulong();
-    int size = ((bits << 13) >> 13).to_ulong();  // Size taken directly from input
+    int size = ((bits << 13) >> 13).to_ulong(); 
 
     int globalStart = stripNumber * STRIP_SIZE + startPosition;
-    int globalEnd = globalStart + size - 1;  // Subtracting 1 to get the correct end position
+    int globalEnd = globalStart + size - 1; 
 
-    // Debug print
     std::cout << "Parsed Cluster - Strip: " << stripNumber 
               << ", Start: " << startPosition 
               << ", Size: " << size 

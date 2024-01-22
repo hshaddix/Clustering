@@ -74,7 +74,7 @@ std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
 std::string toBinaryString(const Cluster& cluster) {
     std::bitset<4> binaryStrip(cluster.stripNumber);
     std::bitset<8> binaryStart(cluster.startPosition);
-    std::bitset<3> binarySize(cluster.size - 1);
+    std::bitset<3> binarySize(cluster.size);  // No subtraction of 1
 
     return "0" + binaryStrip.to_string() + binaryStart.to_string() + binarySize.to_string();
 }

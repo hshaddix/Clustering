@@ -54,10 +54,18 @@ std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
             current.size += clusters[i].size;
             current.globalEnd = current.globalStart + current.size - 1;
         } else {
+            std::cout << "Merged Cluster - Strip: " << current.stripNumber 
+                      << ", Start: " << current.startPosition 
+                      << ", Size: " << current.size << std::endl;
+
             merged.push_back(current);
             current = clusters[i];
         }
     }
+
+    std::cout << "Merged Cluster - Strip: " << current.stripNumber 
+              << ", Start: " << current.startPosition 
+              << ", Size: " << current.size << std::endl;
 
     merged.push_back(current);
     return merged;
@@ -66,7 +74,7 @@ std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
 std::string toBinaryString(const Cluster& cluster) {
     std::bitset<4> binaryStrip(cluster.stripNumber);
     std::bitset<8> binaryStart(cluster.startPosition);
-    std::bitset<3> binarySize(cluster.size - 1);  // Convert size to binary (size - 1 as per logic)
+    std::bitset<3> binarySize(cluster.size - 1);
 
     return "0" + binaryStrip.to_string() + binaryStart.to_string() + binarySize.to_string();
 }

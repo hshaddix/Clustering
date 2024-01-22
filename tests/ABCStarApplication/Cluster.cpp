@@ -18,10 +18,10 @@ Cluster parseCluster(const std::string& binary) {
     std::bitset<16> bits(binary);
     int stripNumber = (bits >> 11).to_ulong();
     int startPosition = ((bits << 5) >> 8).to_ulong();
-    int size = ((bits << 13) >> 13).to_ulong() + 1;
+    int size = ((bits << 13) >> 13).to_ulong();  // Size taken directly from input
 
     int globalStart = stripNumber * STRIP_SIZE + startPosition;
-    int globalEnd = globalStart + size - 1;
+    int globalEnd = globalStart + size - 1;  // Subtracting 1 to get the correct end position
 
     // Debug print
     std::cout << "Parsed Cluster - Strip: " << stripNumber 
@@ -67,7 +67,7 @@ std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
 std::string toBinaryString(const Cluster& cluster) {
     std::bitset<4> binaryStrip(cluster.stripNumber);
     std::bitset<8> binaryStart(cluster.startPosition);
-    std::bitset<3> binarySize(cluster.size - 1);
+    std::bitset<3> binarySize(cluster.size - 1);  // Convert size to binary (size - 1 as per logic)
 
     return "0" + binaryStrip.to_string() + binaryStart.to_string() + binarySize.to_string();
 }

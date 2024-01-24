@@ -18,6 +18,11 @@ run_case2:
 	@echo "Running case 2:"
 	@echo "0000001111100010 0000100000000010" | ./$(TARGET)
 
+
+run_case3:
+	@echo "Running case 3:"
+	@echo "0000101111100100 0000100110110010" | ./$(TARGET)
+
 clean:
 	rm -f $(TARGET) $(TARGET).o
 

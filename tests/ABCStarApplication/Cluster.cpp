@@ -4,10 +4,10 @@
 #include <algorithm>
 #include <string>
 
-const int STRIP_SIZE = 126; // Define the size of each strip
+const int STRIP_SIZE = 126; // Number of Channels in ABC*
 
 struct Cluster {
-    int stripNumber;   // Number of the strip where the cluster is located
+    int stripNumber;   // ABCstar ID/Number
     int startPosition; // Starting position of the cluster on the strip
     int size;          // Total size of the cluster, including the seed hit
     int globalStart;   // Global start position of the cluster

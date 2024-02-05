@@ -29,8 +29,11 @@ Cluster parseCluster(const std::string& binary) {
     std::bitset<16> bits(binary);
     int stripNumber = (bits >> 11).to_ulong();
     int startPosition = ((bits << 5) >> 8).to_ulong();
-    int sizeBitmask = static_cast<int>((bits << 13) >> 13).to_ulong(); // Correct casting
+    
+    // Apply the casting correctly after converting to ulong
+    int sizeBitmask = static_cast<int>(((bits << 13) >> 13).to_ulong());
     int size = decodeSize(sizeBitmask);
+
     int globalStart = stripNumber * STRIP_SIZE + startPosition;
     int globalEnd = globalStart + size - 1;
 
@@ -40,6 +43,7 @@ Cluster parseCluster(const std::string& binary) {
 
     return {stripNumber, startPosition, size, globalStart, globalEnd};
 }
+
 
 bool areAdjacent(const Cluster& a, const Cluster& b) {
     if (a.stripNumber != b.stripNumber) {

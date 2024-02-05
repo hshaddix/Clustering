@@ -4,10 +4,10 @@
 #include <algorithm>
 #include <string>
 
-const int STRIP_SIZE = 126; // Number of channels in the ABC*
+const int STRIP_SIZE = 126; // Define the size of each strip
 
 struct Cluster {
-    int stripNumber;   // ABC* Number/ID
+    int stripNumber;   // Number of the strip where the cluster is located
     int startPosition; // Starting position of the cluster on the strip
     int size;          // Size of the cluster
     int globalStart;   // Global start position of the cluster
@@ -20,7 +20,13 @@ Cluster parseCluster(const std::string& binary) {
     int startPosition = ((bits << 5) >> 8).to_ulong();
     int size = ((bits << 13) >> 13).to_ulong(); 
     int globalStart = stripNumber * STRIP_SIZE + startPosition;
-    int globalEnd = globalStart + size - 1;
+    int globalEnd = globalStart + size - 1; 
+
+    // Print after parsing
+    std::cout << "Parsed Cluster - Strip: " << stripNumber 
+              << ", Start: " << startPosition 
+              << ", Size: " << size << std::endl;
+
     return {stripNumber, startPosition, size, globalStart, globalEnd};
 };
 
@@ -36,8 +42,10 @@ std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
     std::sort(clusters.begin(), clusters.end(), [](const Cluster& a, const Cluster& b) {
         return a.globalStart < b.globalStart;
     });
+
     std::vector<Cluster> merged;
     Cluster current = clusters[0];
+
     for (size_t i = 1; i < clusters.size(); ++i) {
         if (areAdjacent(current, clusters[i])) {
             current.size += clusters[i].size;
@@ -47,6 +55,7 @@ std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
             current = clusters[i];
         }
     }
+
     merged.push_back(current);
     return merged;
 }
@@ -64,9 +73,17 @@ int main() {
     while (std::cin >> binary) {
         clusters.push_back(parseCluster(binary));
     }
+
+    // Print before outputting final merged clusters
+    std::cout << "Final Merged Clusters:" << std::endl;
     auto mergedClusters = mergeClusters(clusters);
     for (const auto& cluster : mergedClusters) {
+        // Print the final merged cluster details
+        std::cout << "Final Cluster - Strip: " << cluster.stripNumber 
+                  << ", Start: " << cluster.startPosition 
+                  << ", Size: " << cluster.size << std::endl;
         std::cout << toBinaryString(cluster) << std::endl;
     }
+
     return 0;
 }

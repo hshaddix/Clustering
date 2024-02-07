@@ -20,7 +20,7 @@ run_case2:
 
 run_case3:
     @echo "Running case 3:"
-    @echo "0000100110010011 0000100110110001" | ./$(TARGET) # First cluster size bits to 011 for size 4, second to 001 for size 2
+    @echo "0000100110010111 0000100110110001" | ./$(TARGET) # First cluster size bits to 111 for size 4, second to 001 for size 2
 
 clean:
     rm -f $(TARGET) $(TARGET).o

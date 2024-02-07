@@ -21,8 +21,14 @@ std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters);
 std::string toBinaryString(const Cluster& cluster);
 
 int decodeSize(int bitmask) {
-    // Correctly decode the size bitmask
-    return bitmask + 1; // Adjust this based on the actual decoding logic you need
+    // Counts the number of '1' bits in the bitmask to determine additional hits.
+    int additionalHits = 0;
+    for (int i = 0; i < 3; ++i) {
+        if (bitmask & (1 << i)) { // Check each bit if it's set.
+            additionalHits++;
+        }
+    }
+    return 1 + additionalHits; // Include the seed hit in the total size.
 }
 
 Cluster parseCluster(const std::string& binary) {

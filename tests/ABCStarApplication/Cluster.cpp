@@ -9,69 +9,87 @@ const int STRIP_SIZE = 126; // Number of Channels in ABC*
 struct Cluster {
     int stripNumber;   // ABCstar ID/Number
     int startPosition; // Starting position of the cluster on the strip
-    int size;          // Total size of the cluster, including the seed hit
-    int globalStart;   // Global start position of the cluster
-    int globalEnd;     // Global end position of the cluster
+    std::vector<int> hits; // Positions of hits relative to start
 };
 
-// Forward declarations
-int decodeSize(int bitmask);
-bool areAdjacent(const Cluster& a, const Cluster& b);
-std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters);
-std::string toBinaryString(const Cluster& cluster);
-
-int decodeSize(int bitmask) {
-    // Counts the number of '1' bits in the bitmask to determine additional hits.
-    int additionalHits = 0;
-    for (int i = 0; i < 3; ++i) {
-        if (bitmask & (1 << i)) { // Check each bit if it's set.
-            additionalHits++;
-        }
+std::vector<int> decodeSize(int bitmask, int startPosition) {
+    std::vector<int> positions;
+    // Handle each bitmask case as specified
+    switch (bitmask) {
+        case 0b000: // No additional hits.
+            break;
+        case 0b001: // New cluster starts at initial + 3.
+            positions.push_back(startPosition + 3);
+            break;
+        case 0b010: // A single hit at initial + 2.
+            positions.push_back(startPosition + 2);
+            break;
+        case 0b100: // A hit following the initial.
+            positions.push_back(startPosition + 1);
+            break;
+        case 0b110: // Two following hits.
+            positions.push_back(startPosition + 1);
+            positions.push_back(startPosition + 2);
+            break;
+        case 0b011: // Hit at initial + 2 and another hit following it.
+            positions.push_back(startPosition + 2);
+            positions.push_back(startPosition + 3);
+            break;
+        case 0b101: // A hit, a gap, then another hit at initial + 3.
+            positions.push_back(startPosition + 1);
+            positions.push_back(startPosition + 3);
+            break;
+        case 0b111: // Three following hits.
+            positions.push_back(startPosition + 1);
+            positions.push_back(startPosition + 2);
+            positions.push_back(startPosition + 3);
+            break;
+        default:
+            std::cerr << "Unexpected bitmask value" << std::endl;
     }
-    return 1 + additionalHits; // Include the seed hit in the total size.
+    return positions;
 }
 
 Cluster parseCluster(const std::string& binary) {
     std::bitset<16> bits(binary);
     int stripNumber = (bits >> 11).to_ulong();
     int startPosition = ((bits << 5) >> 8).to_ulong();
-    
-    // Apply the casting correctly after converting to ulong
     int sizeBitmask = static_cast<int>(((bits << 13) >> 13).to_ulong());
-    int size = decodeSize(sizeBitmask);
-
-    int globalStart = stripNumber * STRIP_SIZE + startPosition;
-    int globalEnd = globalStart + size - 1;
+    
+    auto hits = decodeSize(sizeBitmask, startPosition);
 
     std::cout << "Parsed Cluster - Strip: " << stripNumber 
               << ", Start: " << startPosition 
-              << ", Size: " << size << std::endl;
+              << ", Size Bitmask: " << std::bitset<3>(sizeBitmask) << std::endl;
 
-    return {stripNumber, startPosition, size, globalStart, globalEnd};
+    return {stripNumber, startPosition, hits};
 }
 
-
+// Adjusted to work with the new structure of Cluster
 bool areAdjacent(const Cluster& a, const Cluster& b) {
-    if (a.stripNumber != b.stripNumber) {
-        return (a.globalEnd + 1) % STRIP_SIZE == b.startPosition;
+    for (int hit : a.hits) {
+        for (int nextHit : b.hits) {
+            if (hit + 1 == nextHit) return true;
+        }
     }
-    return a.globalEnd + 1 == b.globalStart;
+    return false;
 }
 
 std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
     if (clusters.empty()) return {};
 
     std::sort(clusters.begin(), clusters.end(), [](const Cluster& a, const Cluster& b) {
-        return a.globalStart < b.globalStart;
+        return a.startPosition < b.startPosition;
     });
 
     std::vector<Cluster> merged;
-    Cluster current = clusters[0];
+    Cluster current = clusters.front();
 
     for (size_t i = 1; i < clusters.size(); ++i) {
         if (areAdjacent(current, clusters[i])) {
-            current.size += clusters[i].size;
-            current.globalEnd = current.globalStart + current.size - 1;
+            current.hits.insert(current.hits.end(), clusters[i].hits.begin(), clusters[i].hits.end());
+            std::sort(current.hits.begin(), current.hits.end());
+            current.hits.erase(unique(current.hits.begin(), current.hits.end()), current.hits.end());
         } else {
             merged.push_back(current);
             current = clusters[i];
@@ -85,7 +103,8 @@ std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
 std::string toBinaryString(const Cluster& cluster) {
     std::bitset<4> binaryStrip(cluster.stripNumber);
     std::bitset<8> binaryStart(cluster.startPosition);
-    std::bitset<3> binarySize(cluster.size - 1); // Convert total size back to bitmask for output
+    // Simplified output assuming size not directly relevant for final output
+    std::bitset<3> binarySize(0); // Placeholder for output
 
     return "0" + binaryStrip.to_string() + binaryStart.to_string() + binarySize.to_string();
 }
@@ -103,9 +122,11 @@ int main() {
     std::cout << "Final Merged Clusters:" << std::endl;
     for (const auto& cluster : mergedClusters) {
         std::cout << "Final Cluster - Strip: " << cluster.stripNumber 
-                  << ", Start: " << cluster.startPosition 
-                  << ", Size: " << cluster.size << std::endl;
-        std::cout << toBinaryString(cluster) << std::endl;
+                  << ", Start: " << cluster.startPosition << ", Hits: ";
+        for (auto hit : cluster.hits) {
+            std::cout << hit << " ";
+        }
+        std::cout << std::endl;
     }
 
     return 0;

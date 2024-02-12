@@ -11,66 +11,55 @@ struct Hit {
     int position;      // Position of the hit on the strip
 };
 
-// Function to decode the bitmask into a vector of hit positions
+// Custom comparator for sorting hits
+struct HitComparator {
+    bool operator()(const Hit& a, const Hit& b) const {
+        return a.stripNumber < b.stripNumber || (a.stripNumber == b.stripNumber && a.position < b.position);
+    }
+};
+
 std::vector<Hit> decodeSize(int bitmask, int startPosition, int stripNumber) {
     std::vector<Hit> hits;
-    // Direct inclusion of the seed hit for all cases except '000'
-    if (bitmask != 0b000) {
-        hits.push_back({stripNumber, startPosition});
-    }
-    // Decoding the bitmask to identify additional hits or clusters
     if (bitmask & 0b001) hits.push_back({stripNumber, startPosition + 1});
     if (bitmask & 0b010) hits.push_back({stripNumber, startPosition + 2});
     if (bitmask & 0b100) hits.push_back({stripNumber, startPosition + 3});
-
     return hits;
 }
 
-// Parses the binary string into a vector of Hit structures
 std::vector<Hit> parseCluster(const std::string& binary) {
     std::bitset<16> bits(binary);
     int stripNumber = (bits >> 11).to_ulong();
     int startPosition = ((bits << 5) >> 8).to_ulong();
     int sizeBitmask = static_cast<int>(((bits << 13) >> 13).to_ulong());
-
     return decodeSize(sizeBitmask, startPosition, stripNumber);
 }
 
-// Merges adjacent hits into clusters and prints the final clusters
 void mergeAndPrintClusters(const std::vector<Hit>& hits) {
     if (hits.empty()) return;
 
-    std::sort(hits.begin(), hits.end(), [](const Hit& a, const Hit& b) {
-        return a.position < b.position || (a.position == b.position && a.stripNumber < b.stripNumber);
-    });
+    // Sort hits using the custom comparator
+    std::vector<Hit> sortedHits = hits; // Copy to sort
+    std::sort(sortedHits.begin(), sortedHits.end(), HitComparator());
 
+    // Merge adjacent hits into clusters
     std::vector<std::vector<Hit>> clusters;
-    for (const auto& hit : hits) {
-        if (!clusters.empty() && 
-            clusters.back().back().stripNumber == hit.stripNumber && 
-            clusters.back().back().position + 1 == hit.position) {
-            clusters.back().push_back(hit);
-        } else if (!clusters.empty() && 
-                   clusters.back().back().stripNumber == hit.stripNumber &&
-                   clusters.back().back().position == hit.position) {
-            // Do not add if it's the same position as the last hit (handles '000' case and duplicates)
-            continue;
+    for (const auto& hit : sortedHits) {
+        if (clusters.empty() || hit.stripNumber != clusters.back().back().stripNumber || hit.position > clusters.back().back().position + 1) {
+            clusters.push_back({hit}); // Start a new cluster
         } else {
-            clusters.push_back({hit});
+            clusters.back().push_back(hit); // Add to the existing cluster
         }
     }
 
-    // Printing clusters
+    // Print clusters
     std::cout << "Final Merged Clusters:" << std::endl;
     for (const auto& cluster : clusters) {
-        if (cluster.empty()) continue;
-        std::bitset<4> binaryStrip(cluster.front().stripNumber);
-        std::bitset<8> binaryStart(cluster.front().position);
-        int size = cluster.size();
-        std::bitset<3> binarySize(size - 1); // Adjusting size to match expected output format
-
-        // Output format: 0 + Strip(4 bits) + Start Position(8 bits) + Size(3 bits)
-        std::cout << "0" + binaryStrip.to_string() + binaryStart.to_string() + binarySize.to_string() << std::endl;
+        if (!cluster.empty()) {
+            std::bitset<4> binaryStrip(cluster.front().stripNumber);
+            std::bitset<8> binaryStart(cluster.front().position);
+            std::bitset<3> binarySize(cluster.size() - 1); // Convert size to 3-bit bitmask for output
+            std::cout << "0" + binaryStrip.to_string() + binaryStart.to_string() + binarySize.to_string() << std::endl;
+        }
     }
 }
 

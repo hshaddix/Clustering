@@ -6,128 +6,117 @@
 
 const int STRIP_SIZE = 126; // Number of Channels in ABC*
 
-struct Cluster {
+struct Hit {
     int stripNumber;   // ABCstar ID/Number
-    int startPosition; // Starting position of the cluster on the strip
-    std::vector<int> hits; // Positions of hits relative to start
+    int position;      // Position of the hit on the strip
 };
 
-std::vector<int> decodeSize(int bitmask, int startPosition) {
-    std::vector<int> positions;
-    // Handle each bitmask case as specified
+// Decode the bitmask into a vector of hit positions relative to the start position and strip number
+std::vector<Hit> decodeSize(int bitmask, int startPosition, int stripNumber) {
+    std::vector<Hit> hits;
+    // Interpret bitmask according to specified rules
     switch (bitmask) {
         case 0b000: // No additional hits.
             break;
         case 0b001: // New cluster starts at initial + 3.
-            positions.push_back(startPosition + 3);
+            hits.push_back({stripNumber, startPosition + 3});
             break;
         case 0b010: // A single hit at initial + 2.
-            positions.push_back(startPosition + 2);
-            break;
-        case 0b100: // A hit following the initial.
-            positions.push_back(startPosition + 1);
-            break;
-        case 0b110: // Two following hits.
-            positions.push_back(startPosition + 1);
-            positions.push_back(startPosition + 2);
+            hits.push_back({stripNumber, startPosition + 2});
             break;
         case 0b011: // Hit at initial + 2 and another hit following it.
-            positions.push_back(startPosition + 2);
-            positions.push_back(startPosition + 3);
+            hits.push_back({stripNumber, startPosition + 2});
+            hits.push_back({stripNumber, startPosition + 3});
+            break;
+        case 0b100: // A hit immediately following the initial.
+            hits.push_back({stripNumber, startPosition + 1});
             break;
         case 0b101: // A hit, a gap, then another hit at initial + 3.
-            positions.push_back(startPosition + 1);
-            positions.push_back(startPosition + 3);
+            hits.push_back({stripNumber, startPosition + 1});
+            hits.push_back({stripNumber, startPosition + 3});
+            break;
+        case 0b110: // Two hits immediately following the initial.
+            hits.push_back({stripNumber, startPosition + 1});
+            hits.push_back({stripNumber, startPosition + 2});
             break;
         case 0b111: // Three following hits.
-            positions.push_back(startPosition + 1);
-            positions.push_back(startPosition + 2);
-            positions.push_back(startPosition + 3);
+            hits.push_back({stripNumber, startPosition + 1});
+            hits.push_back({stripNumber, startPosition + 2});
+            hits.push_back({stripNumber, startPosition + 3});
             break;
         default:
             std::cerr << "Unexpected bitmask value" << std::endl;
     }
-    return positions;
+    return hits;
 }
 
-Cluster parseCluster(const std::string& binary) {
+// Parses a binary string into a vector of Hit structures.
+std::vector<Hit> parseCluster(const std::string& binary) {
     std::bitset<16> bits(binary);
     int stripNumber = (bits >> 11).to_ulong();
     int startPosition = ((bits << 5) >> 8).to_ulong();
     int sizeBitmask = static_cast<int>(((bits << 13) >> 13).to_ulong());
     
-    auto hits = decodeSize(sizeBitmask, startPosition);
+    auto hits = decodeSize(sizeBitmask, startPosition, stripNumber);
 
     std::cout << "Parsed Cluster - Strip: " << stripNumber 
               << ", Start: " << startPosition 
               << ", Size Bitmask: " << std::bitset<3>(sizeBitmask) << std::endl;
 
-    return {stripNumber, startPosition, hits};
+    return hits;
 }
 
-// Adjusted to work with the new structure of Cluster
-bool areAdjacent(const Cluster& a, const Cluster& b) {
-    for (int hit : a.hits) {
-        for (int nextHit : b.hits) {
-            if (hit + 1 == nextHit) return true;
-        }
-    }
-    return false;
-}
+// Merges adjacent hits into clusters and prints the final clusters.
+void mergeAndPrintClusters(std::vector<Hit>& hits) {
+    if (hits.empty()) return;
 
-std::vector<Cluster> mergeClusters(std::vector<Cluster>& clusters) {
-    if (clusters.empty()) return {};
-
-    std::sort(clusters.begin(), clusters.end(), [](const Cluster& a, const Cluster& b) {
-        return a.startPosition < b.startPosition;
+    // Sort hits by strip number first, then position
+    std::sort(hits.begin(), hits.end(), [](const Hit& a, const Hit& b) {
+        return a.stripNumber < b.stripNumber || (a.stripNumber == b.stripNumber && a.position < b.position);
     });
 
-    std::vector<Cluster> merged;
-    Cluster current = clusters.front();
+    // Merge adjacent hits into clusters
+    std::vector<std::vector<Hit>> clusters;
+    std::vector<Hit> currentCluster;
+    currentCluster.push_back(hits[0]);
 
-    for (size_t i = 1; i < clusters.size(); ++i) {
-        if (areAdjacent(current, clusters[i])) {
-            current.hits.insert(current.hits.end(), clusters[i].hits.begin(), clusters[i].hits.end());
-            std::sort(current.hits.begin(), current.hits.end());
-            current.hits.erase(unique(current.hits.begin(), current.hits.end()), current.hits.end());
+    for (size_t i = 1; i < hits.size(); ++i) {
+        if (hits[i].stripNumber == currentCluster.back().stripNumber && hits[i].position == currentCluster.back().position + 1) {
+            // If the current hit is adjacent to the last hit in the current cluster, add it to the cluster
+            currentCluster.push_back(hits[i]);
         } else {
-            merged.push_back(current);
-            current = clusters[i];
+            // Otherwise, start a new cluster
+            clusters.push_back(currentCluster);
+            currentCluster.clear();
+            currentCluster.push_back(hits[i]);
         }
     }
+    clusters.push_back(currentCluster); // Add the last cluster
 
-    merged.push_back(current);
-    return merged;
-}
-
-std::string toBinaryString(const Cluster& cluster) {
-    std::bitset<4> binaryStrip(cluster.stripNumber);
-    std::bitset<8> binaryStart(cluster.startPosition);
-    // Simplified output assuming size not directly relevant for final output
-    std::bitset<3> binarySize(0); // Placeholder for output
-
-    return "0" + binaryStrip.to_string() + binaryStart.to_string() + binarySize.to_string();
+    // Print clusters
+    std::cout << "Final Merged Clusters:" << std::endl;
+    for (const auto& cluster : clusters) {
+        if (!cluster.empty()) {
+            std::bitset<4> binaryStrip(cluster[0].stripNumber);
+            std::bitset<8> binaryStart(cluster[0].position);
+            int size = cluster.size(); // Cluster size is the number of hits in the cluster
+            std::bitset<3> binarySize(size - 1); // Convert size to 3-bit bitmask
+            
+            std::cout << "0" + binaryStrip.to_string() + binaryStart.to_string() + binarySize.to_string() << std::endl;
+        }
+    }
 }
 
 int main() {
     std::string binary;
-    std::vector<Cluster> clusters;
+    std::vector<Hit> allHits;
 
     while (std::cin >> binary) {
-        clusters.push_back(parseCluster(binary));
+        auto hits = parseCluster(binary);
+        allHits.insert(allHits.end(), hits.begin(), hits.end());
     }
 
-    auto mergedClusters = mergeClusters(clusters);
-
-    std::cout << "Final Merged Clusters:" << std::endl;
-    for (const auto& cluster : mergedClusters) {
-        std::cout << "Final Cluster - Strip: " << cluster.stripNumber 
-                  << ", Start: " << cluster.startPosition << ", Hits: ";
-        for (auto hit : cluster.hits) {
-            std::cout << hit << " ";
-        }
-        std::cout << std::endl;
-    }
+    mergeAndPrintClusters(allHits);
 
     return 0;
 }

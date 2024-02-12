@@ -12,11 +12,11 @@ $(TARGET).o: $(TARGET).cpp
 
 run_case1:
     @echo "Running case 1:"
-    @echo "0000000110010001 0000000110100001" | ./$(TARGET) # Size bits changed to 001 for size 2
+    @echo "000000110010010" | ./$(TARGET)
 
 run_case2:
     @echo "Running case 2:"
-    @echo "0000001111100001 0000100000000001" | ./$(TARGET) # Size bits changed to 001 for size 2
+    @echo "000000110010101 000000110110100" | ./$(TARGET)
 
 run_case3:
     @echo "Running case 3:"

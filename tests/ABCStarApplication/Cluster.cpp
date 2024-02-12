@@ -16,9 +16,9 @@ std::vector<Hit> decodeSize(int bitmask, int seedPosition, int stripNumber) {
     // Include the seed hit
     hits.push_back({stripNumber, seedPosition});
     // Decode the bitmask to determine additional hits
-    if (bitmask & 0b001) hits.push_back({stripNumber, seedPosition + 1});
+    if (bitmask & 0b001) hits.push_back({stripNumber, seedPosition + 3});
     if (bitmask & 0b010) hits.push_back({stripNumber, seedPosition + 2});
-    if (bitmask & 0b100) hits.push_back({stripNumber, seedPosition + 3});
+    if (bitmask & 0b100) hits.push_back({stripNumber, seedPosition + 1});
 
     return hits;
 }

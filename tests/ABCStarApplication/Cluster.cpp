@@ -18,12 +18,11 @@ bool operator<(const Hit& a, const Hit& b) {
     return a.stripNumber < b.stripNumber;
 }
 
+// This function is not explicitly used but conceptual for understanding the adjacency logic.
 bool areAdjacent(const Hit& a, const Hit& b) {
-    // Check if hits are on the same strip and adjacent.
     if (a.stripNumber == b.stripNumber && a.position + 1 == b.position) {
         return true;
     }
-    // Check for adjacency at strip boundary.
     if (a.stripNumber + 1 == b.stripNumber && a.position == STRIP_SIZE - 1 && b.position == 0) {
         return true;
     }
@@ -61,7 +60,11 @@ std::vector<std::vector<Hit>> mergeClusters(std::vector<Hit>& hits) {
     std::vector<Hit> currentCluster = {hits.front()};
 
     for (size_t i = 1; i < hits.size(); ++i) {
-        if (areAdjacent(currentCluster.back(), hits[i])) {
+        // Check for direct adjacency or adjacency across strip boundaries.
+        bool isAdjacent = (hits[i].stripNumber == currentCluster.back().stripNumber && hits[i].position == currentCluster.back().position + 1) ||
+                          (hits[i].stripNumber == currentCluster.back().stripNumber + 1 && currentCluster.back().position == STRIP_SIZE - 1 && hits[i].position == 0);
+        
+        if (isAdjacent) {
             currentCluster.push_back(hits[i]);
         } else {
             clusters.push_back(currentCluster);

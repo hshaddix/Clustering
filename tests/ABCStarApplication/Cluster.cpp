@@ -19,9 +19,9 @@ bool operator<(const Hit& a, const Hit& b) {
 std::vector<Hit> decodeSize(int bitmask, int seedPosition, int stripNumber) {
     std::vector<Hit> hits;
     hits.push_back({stripNumber, seedPosition}); // Always include the seed hit.
-    if (bitmask & 0b001) hits.push_back({stripNumber, seedPosition + 1});
+    if (bitmask & 0b001) hits.push_back({stripNumber, seedPosition + 3});
     if (bitmask & 0b010) hits.push_back({stripNumber, seedPosition + 2});
-    if (bitmask & 0b100) hits.push_back({stripNumber, seedPosition + 3});
+    if (bitmask & 0b100) hits.push_back({stripNumber, seedPosition + 1});
     return hits;
 }
 

@@ -18,17 +18,6 @@ bool operator<(const Hit& a, const Hit& b) {
     return a.stripNumber < b.stripNumber;
 }
 
-// This function is not explicitly used but conceptual for understanding the adjacency logic.
-bool areAdjacent(const Hit& a, const Hit& b) {
-    if (a.stripNumber == b.stripNumber && a.position + 1 == b.position) {
-        return true;
-    }
-    if (a.stripNumber + 1 == b.stripNumber && a.position == STRIP_SIZE - 1 && b.position == 0) {
-        return true;
-    }
-    return false;
-}
-
 std::vector<Hit> decodeSize(int bitmask, int seedPosition, int stripNumber) {
     std::vector<Hit> hits;
     hits.push_back({stripNumber, seedPosition}); // Always include the seed hit.
@@ -60,10 +49,9 @@ std::vector<std::vector<Hit>> mergeClusters(std::vector<Hit>& hits) {
     std::vector<Hit> currentCluster = {hits.front()};
 
     for (size_t i = 1; i < hits.size(); ++i) {
-        // Check for direct adjacency or adjacency across strip boundaries.
         bool isAdjacent = (hits[i].stripNumber == currentCluster.back().stripNumber && hits[i].position == currentCluster.back().position + 1) ||
                           (hits[i].stripNumber == currentCluster.back().stripNumber + 1 && currentCluster.back().position == STRIP_SIZE - 1 && hits[i].position == 0);
-        
+
         if (isAdjacent) {
             currentCluster.push_back(hits[i]);
         } else {
@@ -77,6 +65,13 @@ std::vector<std::vector<Hit>> mergeClusters(std::vector<Hit>& hits) {
 }
 
 void printClusters(const std::vector<std::vector<Hit>>& clusters) {
+    std::cout << "Preparing Final Merged Clusters:" << std::endl;
+    for (const auto& cluster : clusters) {
+        std::cout << "Pre-output Cluster Info - Strip: " << cluster.front().stripNumber
+                  << ", Start Position: " << cluster.front().position
+                  << ", Size: " << cluster.size() << std::endl;
+    }
+
     std::cout << "Final Merged Clusters:" << std::endl;
     for (const auto& cluster : clusters) {
         std::bitset<4> binaryStrip(cluster.front().stripNumber);

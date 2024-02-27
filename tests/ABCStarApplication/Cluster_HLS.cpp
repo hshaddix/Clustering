@@ -16,7 +16,7 @@ struct Hit {
     ap_int<POSITION_BITS> position;
 };
 
-// Assuming a simplified version of sorting and merging due to HLS constraints
+// Simplified version of sorting and merging due to HLS constraints
 void sortHits(Hit hits[], int numHits) {
     // Simplified bubble sort for demonstration, replace with a more efficient sort for larger data sets
     bool swapped;

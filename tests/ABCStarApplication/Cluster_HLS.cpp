@@ -1,30 +1,28 @@
 #include <iostream>
 #include <hls_stream.h>
-#include <ap_int.h> // For arbitrary precision integers
+#include <ap_int.h>
 
-#define MAX_HITS 128 // Assuming a maximum of 128 hits for simplicity
-#define MAX_CLUSTERS 32 // Assuming a maximum of 32 clusters
-
-const int STRIP_SIZE = 126;
-const int STRIP_NUMBER_BITS = 11;
-const int HIT_START_SHIFT = 5;
-const int POSITION_BITS = 8;
-const int SIZE_BITMASK_BITS = 13;
+#define MAX_HITS 1024
+#define MAX_CLUSTERS 128
+#define STRIP_SIZE 126
+#define STRIP_NUMBER_BITS 11
+#define HIT_START_SHIFT 5
+#define POSITION_BITS 8
+#define SIZE_BITMASK_BITS 13
 
 struct Hit {
-    ap_int<STRIP_NUMBER_BITS> stripNumber; // Using ap_int for HLS optimization
-    ap_int<POSITION_BITS> position;
+    ap_uint<STRIP_NUMBER_BITS> stripNumber; // Use ap_uint for HLS bit-precision
+    ap_uint<POSITION_BITS> position;
 };
 
-// Simplified version of sorting and merging due to HLS constraints
-void sortHits(Hit hits[], int numHits) {
-    // Simplified bubble sort for demonstration, replace with a more efficient sort for larger data sets
+// Simplified bubble sort for HLS 
+void sortHits(Hit hits[], int n) {
     bool swapped;
     do {
         swapped = false;
-        for (int i = 1; i < numHits; i++) {
+        for (int i = 1; i < n; ++i) {
             if (hits[i-1].stripNumber > hits[i].stripNumber ||
-                (hits[i-1].stripNumber == hits[i].stripNumber && hits[i-1].position > hits[i].position)) {
+               (hits[i-1].stripNumber == hits[i].stripNumber && hits[i-1].position > hits[i].position)) {
                 Hit temp = hits[i-1];
                 hits[i-1] = hits[i];
                 hits[i] = temp;
@@ -34,58 +32,78 @@ void sortHits(Hit hits[], int numHits) {
     } while (swapped);
 }
 
-void decodeSize(int bitmask, int seedPosition, int stripNumber, Hit hits[], int& numHits) {
-    // Reset the number of hits
-    numHits = 0;
-    
-    // Always include the seed hit
-    hits[numHits++] = {stripNumber, seedPosition};
-    
-    if (bitmask & 0b001) hits[numHits++] = {stripNumber, seedPosition + 3};
-    if (bitmask & 0b010) hits[numHits++] = {stripNumber, seedPosition + 2};
-    if (bitmask & 0b100) hits[numHits++] = {stripNumber, seedPosition + 1};
+// Decode the size bitmask and populate hits array
+int decodeSize(ap_uint<16> bitmask, int &hitCount, Hit hits[], int stripNumber, int seedPosition) {
+    hits[hitCount++] = {stripNumber, seedPosition};
+    if (bitmask & 0b001) hits[hitCount++] = {stripNumber, seedPosition + 3};
+    if (bitmask & 0b010) hits[hitCount++] = {stripNumber, seedPosition + 2};
+    if (bitmask & 0b100) hits[hitCount++] = {stripNumber, seedPosition + 1};
+    return hitCount;
 }
 
-void mergeClusters(Hit hits[], int numHits, Hit clusters[], int& numClusters) {
-    // Simplified merging logic for HLS
-    numClusters = 0;
-    if (numHits == 0) return;
-    
-    // Assuming hits are already sorted
-    clusters[numClusters++] = hits[0]; // Add the first hit as the first cluster
-    
-    for (int i = 1; i < numHits; i++) {
-        // Check if the current hit is adjacent to the last cluster
-        if ((hits[i].stripNumber == clusters[numClusters-1].stripNumber && 
-             hits[i].position == clusters[numClusters-1].position + 1) ||
-            (hits[i].stripNumber == clusters[numClusters-1].stripNumber + 1 && 
-             clusters[numClusters-1].position == STRIP_SIZE - 1 && 
-             hits[i].position == 0)) {
-            // Merge current hit into the last cluster
-            clusters[numClusters-1] = hits[i]; // For simplicity, just update the last cluster's position
-        } else {
-            // Start a new cluster with the current hit
-            clusters[numClusters++] = hits[i];
+// Parse cluster from binary string and fill hits array
+int parseCluster(const ap_uint<16> &binary, Hit hits[], int hitCount) {
+    ap_uint<STRIP_NUMBER_BITS> stripNumber = binary >> (16 - STRIP_NUMBER_BITS);
+    ap_uint<POSITION_BITS> seedPosition = (binary << STRIP_NUMBER_BITS) >> (16 - POSITION_BITS);
+    ap_uint<3> sizeBitmask = binary & 0x7; // Last 3 bits
+
+    return decodeSize(sizeBitmask, hitCount, hits, stripNumber, seedPosition);
+}
+
+// Merge adjacent hits into clusters
+int mergeClusters(Hit hits[], int hitCount, Hit clusters[MAX_CLUSTERS][MAX_HITS], int clusterSizes[MAX_CLUSTERS]) {
+    int clusterCount = 0;
+    if (hitCount == 0) return 0;
+
+    int size = 0;
+    clusters[0][size++] = hits[0]; // Initialize the first cluster with the first hit
+
+    for (int i = 1; i < hitCount; ++i) {
+        bool isNewCluster = hits[i].stripNumber != hits[i-1].stripNumber || hits[i].position != hits[i-1].position + 1;
+
+        if (isNewCluster) {
+            clusterSizes[clusterCount++] = size; // Save the size of the current cluster
+            size = 0; // Reset size for the new cluster
+            if (clusterCount >= MAX_CLUSTERS) break; // Prevent exceeding the maximum number of clusters
         }
+
+        clusters[clusterCount][size++] = hits[i]; // Add hit to the current or new cluster
+    }
+
+    clusterSizes[clusterCount++] = size; // Save the size of the last cluster
+    return clusterCount;
+}
+
+// Print clusters - Format and specifics may need adjustment for HLS synthesis
+void printClusters(Hit clusters[MAX_CLUSTERS][MAX_HITS], int clusterSizes[MAX_CLUSTERS], int clusterCount) {
+    std::cout << "Final Merged Clusters:" << std::endl;
+    for (int i = 0; i < clusterCount; ++i) {
+        std::cout << "Cluster " << i << ": ";
+        for (int j = 0; j < clusterSizes[i]; ++j) {
+            std::cout << "(" << clusters[i][j].stripNumber << ", " << clusters[i][j].position << ") ";
+        }
+        std::cout << std::endl;
     }
 }
 
 int main() {
-    // Example usage with fixed-size arrays
+    // Input processing and function calls need to be adapted for HLS synthesis
+    // This includes reading from streams or fixed-size arrays instead of std::cin
+    // and outputting to streams or external interfaces.
+
     Hit hits[MAX_HITS];
-    int numHits = 0;
-    Hit clusters[MAX_CLUSTERS];
-    int numClusters = 0;
-    
-    // Dummy input processing replaced by fixed input for HLS synthesis
-    // Decode a fixed set of hits
-    decodeSize(0b101, 50, 0, hits, numHits);
-    decodeSize(0b100, 54, 0, hits, numHits);
-    
-    sortHits(hits, numHits); // Sort hits before merging
-    mergeClusters(hits, numHits, clusters, numClusters); // Merge hits into clusters
-    
-    // Printing clusters is not typically done in HLS targeted code, replaced with other forms of output validation
-    
+    Hit clusters[MAX_CLUSTERS][MAX_HITS];
+    int clusterSizes[MAX_CLUSTERS] = {0};
+    int hitCount = 0;
+
+    // Example: parseCluster calls and hit merging
+    // hitCount = parseCluster(inputBinary, hits, hitCount);
+    // Additional parseCluster calls as needed...
+
+    sortHits(hits, hitCount); // Sort hits before merging
+    int clusterCount = mergeClusters(hits, hitCount, clusters, clusterSizes); // Merge hits into clusters
+
+    // printClusters(clusters, clusterSizes, clusterCount); // Printing is for demonstration and may not be synthesizable
+
     return 0;
 }

@@ -12,7 +12,7 @@ struct Hit {
     ap_uint<POSITION_BITS> position;
 };
 
-// Top function prototype declaration
+// Declare the top-level function for HLS synthesis
 void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit outputClusters[MAX_CLUSTERS], int& outputClusterCount);
 
 void decodeSize(ap_uint<3> bitmask, int seedPosition, int stripNumber, Hit hits[MAX_HITS], int& hitCount) {
@@ -22,7 +22,7 @@ void decodeSize(ap_uint<3> bitmask, int seedPosition, int stripNumber, Hit hits[
     if (bitmask[2]) hits[hitCount++] = {stripNumber, seedPosition + 1};
 }
 
-void mergeClusters(Hit hits[MAX_HITS], int hitCount, Hit outputClusters[MAX_CLUSTERS], int inputClusterCount, int& finalClusterCount) {
+void mergeClusters(Hit hits[MAX_HITS], int hitCount, Hit outputClusters[MAX_CLUSTERS], int& finalClusterCount) {
     #pragma HLS INLINE
     int currentClusterIndex = 0; // Track the current index for output clusters
     finalClusterCount = 0; // Initialize final cluster count
@@ -64,7 +64,5 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
     }
 
     // As inputs are assumed to be sorted, no need to sort hits here
-    int dummyOutputCount = 0; // Use a dummy variable for intermediate output count
-    mergeClusters(hits, hitCount, outputClusters, outputClusterCount, dummyOutputCount);
-    outputClusterCount = dummyOutputCount; // Update the final output cluster count
+    mergeClusters(hits, hitCount, outputClusters, outputClusterCount);
 }

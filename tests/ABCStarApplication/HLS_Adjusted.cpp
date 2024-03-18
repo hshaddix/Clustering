@@ -12,6 +12,7 @@ struct Hit {
     ap_uint<POSITION_BITS> position;
 };
 
+// HLS synthesis top-level function declaration
 void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit outputClusters[MAX_CLUSTERS], int& outputClusterCount) {
     #pragma HLS INTERFACE s_axilite port=return
     #pragma HLS INTERFACE s_axilite port=inputHitCount
@@ -19,42 +20,40 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
     #pragma HLS INTERFACE m_axi depth=MAX_HITS port=inputBinaries
     #pragma HLS INTERFACE m_axi depth=MAX_CLUSTERS port=outputClusters
 
-    // Use local buffer to avoid direct write-read dependencies on 'hits' array
-    Hit localBuffer[MAX_HITS];
-    int localHitCount = 0;
+    Hit hits[MAX_HITS];
+    int hitCount = 0; // Count of decoded hits
 
-    // Decode each binary input into hits within the processHits function
-    for (int i = 0; i < inputHitCount; ++i) {
+    // Loop to decode each binary input into hits
+    DecodeLoop: for (int i = 0; i < inputHitCount; ++i) {
         #pragma HLS PIPELINE II=1
         ap_uint<MODULE_NUMBER_BITS> moduleNumber = inputBinaries[i] >> (16 - MODULE_NUMBER_BITS);
         ap_uint<POSITION_BITS> seedPosition = (inputBinaries[i] & ((1 << POSITION_BITS) - 1));
         ap_uint<3> sizeBitmask = (inputBinaries[i] >> POSITION_BITS) & 0x7;
 
-        // Inline decodeSize logic with direct assignment to the local buffer
-        if (sizeBitmask[0] && localHitCount < MAX_HITS) localBuffer[localHitCount++] = {moduleNumber, seedPosition + 1};
-        if (sizeBitmask[1] && localHitCount < MAX_HITS) localBuffer[localHitCount++] = {moduleNumber, seedPosition + 2};
-        if (sizeBitmask[2] && localHitCount < MAX_HITS) localBuffer[localHitCount++] = {moduleNumber, seedPosition + 3};
+        // Direct assignment to the hits array within constraints
+        if (sizeBitmask[0] && hitCount < MAX_HITS) hits[hitCount++] = {moduleNumber, seedPosition + 3};
+        if (sizeBitmask[1] && hitCount < MAX_HITS) hits[hitCount++] = {moduleNumber, seedPosition + 2};
+        if (sizeBitmask[2] && hitCount < MAX_HITS) hits[hitCount++] = {moduleNumber, seedPosition + 1};
     }
 
     outputClusterCount = 0; // Initialize final cluster count
-    int currentClusterIndex = -1;
+    int currentClusterIndex = -1; // Initialize to -1 to correctly handle the first hit as a new cluster
 
-    // Iterate over the local buffer to merge hits into clusters
-    for (int i = 0; i < localHitCount; ++i) {
+    // Loop to merge adjacent hits into clusters
+    MergeLoop: for (int i = 0; i < hitCount; ++i) {
         #pragma HLS PIPELINE II=1
-        bool isNewCluster = (i == 0) || !(localBuffer[i].moduleNumber == localBuffer[i-1].moduleNumber && localBuffer[i].position == localBuffer[i-1].position + 1);
+        bool isNewCluster = (i == 0) || !(hits[i].moduleNumber == hits[i-1].moduleNumber && hits[i].position == hits[i-1].position + 1);
         
         if (isNewCluster) {
-            currentClusterIndex++;
-            if (currentClusterIndex < MAX_CLUSTERS) {
-                outputClusters[currentClusterIndex] = localBuffer[i]; // Assign hit to a new cluster
+            // Increment cluster index and count only if within bounds
+            if (currentClusterIndex < MAX_CLUSTERS - 1) {
+                currentClusterIndex++;
+                outputClusterCount++; // Increment the cluster count for each new cluster
             }
-        } else if (currentClusterIndex < MAX_CLUSTERS - 1) {
-            // If the cluster continues, but only if within bounds
-            outputClusters[currentClusterIndex + 1] = localBuffer[i];
         }
 
-        // Finalize cluster count
-        if (isNewCluster) outputClusterCount++;
+        if (currentClusterIndex < MAX_CLUSTERS) {
+            outputClusters[currentClusterIndex] = hits[i]; // Assign hit to the current cluster
+        }
     }
 }

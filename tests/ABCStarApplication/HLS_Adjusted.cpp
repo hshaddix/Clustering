@@ -4,11 +4,11 @@
 #define MAX_HITS 1024
 #define MAX_CLUSTERS 128
 #define STRIP_SIZE 126
-#define STRIP_NUMBER_BITS 11
+#define MODULE_NUMBER_BITS 11
 #define POSITION_BITS 8
 
 struct Hit {
-    ap_uint<STRIP_NUMBER_BITS> stripNumber;
+    ap_uint<MODULE_NUMBER_BITS> stripNumber;
     ap_uint<POSITION_BITS> position;
 };
 
@@ -26,7 +26,7 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
     // Decode each binary input into hits within the processHits function
     for (int i = 0; i < inputHitCount; ++i) {
         #pragma HLS PIPELINE II=1
-        ap_uint<STRIP_NUMBER_BITS> stripNumber = inputBinaries[i] >> (16 - STRIP_NUMBER_BITS);
+        ap_uint<MODULE_NUMBER_BITS> stripNumber = inputBinaries[i] >> (16 - MODULE_NUMBER_BITS);
         ap_uint<POSITION_BITS> seedPosition = (inputBinaries[i] & ((1 << POSITION_BITS) - 1));
         ap_uint<3> sizeBitmask = (inputBinaries[i] >> POSITION_BITS) & 0x7;
 

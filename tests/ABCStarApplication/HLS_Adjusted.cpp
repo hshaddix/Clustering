@@ -1,4 +1,3 @@
-// HLS_Adjusted_Attempt1.cpp
 #include <ap_int.h>
 #include <hls_stream.h>
 
@@ -19,14 +18,15 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
     #pragma HLS INTERFACE s_axilite port=outputClusterCount
     #pragma HLS INTERFACE m_axi depth=MAX_HITS port=inputBinaries
     #pragma HLS INTERFACE m_axi depth=MAX_CLUSTERS port=outputClusters
-    #pragma HLS ARRAY_PARTITION variable=inputBinaries complete dim=1
-    #pragma HLS ARRAY_PARTITION variable=outputClusters complete dim=1
+    #pragma HLS ARRAY_PARTITION variable=inputBinaries cyclic factor=4 dim=1
+    #pragma HLS ARRAY_PARTITION variable=outputClusters cyclic factor=4 dim=1
 
     Hit hits[MAX_HITS];
     int hitCount = 0;
 
     for (int i = 0; i < inputHitCount; ++i) {
         #pragma HLS PIPELINE II=1
+        #pragma HLS UNROLL factor=4
         ap_uint<MODULE_NUMBER_BITS> moduleNumber = inputBinaries[i] >> (16 - MODULE_NUMBER_BITS);
         ap_uint<POSITION_BITS> seedPosition = (inputBinaries[i] & ((1 << POSITION_BITS) - 1));
         ap_uint<3> sizeBitmask = (inputBinaries[i] >> POSITION_BITS) & 0x7;

@@ -18,36 +18,38 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
     #pragma HLS INTERFACE s_axilite port=outputClusterCount
     #pragma HLS INTERFACE m_axi depth=MAX_HITS port=inputBinaries
     #pragma HLS INTERFACE m_axi depth=MAX_CLUSTERS port=outputClusters
-    #pragma HLS ARRAY_PARTITION variable=inputBinaries cyclic factor=4 dim=1
-    #pragma HLS ARRAY_PARTITION variable=outputClusters cyclic factor=4 dim=1
+    #pragma HLS DATAFLOW
 
-    Hit hits[MAX_HITS];
-    int hitCount = 0;
+    hls::stream<Hit> hitStream;
+    #pragma HLS STREAM variable=hitStream depth=256
 
+    // Decode and stream hits
     for (int i = 0; i < inputHitCount; ++i) {
         #pragma HLS PIPELINE II=1
-        #pragma HLS UNROLL factor=4
         ap_uint<MODULE_NUMBER_BITS> moduleNumber = inputBinaries[i] >> (16 - MODULE_NUMBER_BITS);
         ap_uint<POSITION_BITS> seedPosition = (inputBinaries[i] & ((1 << POSITION_BITS) - 1));
         ap_uint<3> sizeBitmask = (inputBinaries[i] >> POSITION_BITS) & 0x7;
 
-        if (sizeBitmask[0] && hitCount < MAX_HITS) hits[hitCount++] = {moduleNumber, seedPosition + 1};
-        if (sizeBitmask[1] && hitCount < MAX_HITS) hits[hitCount++] = {moduleNumber, seedPosition + 2};
-        if (sizeBitmask[2] && hitCount < MAX_HITS) hits[hitCount++] = {moduleNumber, seedPosition + 3};
+        if (sizeBitmask[0]) hitStream.write({moduleNumber, seedPosition + 1});
+        if (sizeBitmask[1]) hitStream.write({moduleNumber, seedPosition + 2});
+        if (sizeBitmask[2]) hitStream.write({moduleNumber, seedPosition + 3});
     }
 
     outputClusterCount = 0;
 
-    for (int i = 0, currentClusterIndex = -1; i < hitCount; ++i) {
+    // Process streamed hits to form clusters
+    Hit previousHit = {0, 0};
+    for (int i = 0; i < MAX_HITS && !hitStream.empty(); ++i) {
         #pragma HLS PIPELINE II=1
-        bool isNewCluster = (i == 0) || !(hits[i].moduleNumber == hits[i-1].moduleNumber && hits[i].position == hits[i-1].position + 1);
+        Hit currentHit;
+        hitStream.read(currentHit);
+        bool isNewCluster = (i == 0) || !(currentHit.moduleNumber == previousHit.moduleNumber && currentHit.position == previousHit.position + 1);
 
         if (isNewCluster) {
-            currentClusterIndex++;
-            if (currentClusterIndex < MAX_CLUSTERS) {
-                outputClusters[currentClusterIndex] = hits[i];
-                outputClusterCount++;
+            if (outputClusterCount < MAX_CLUSTERS) {
+                outputClusters[outputClusterCount++] = currentHit;
             }
         }
+        previousHit = currentHit;
     }
 }

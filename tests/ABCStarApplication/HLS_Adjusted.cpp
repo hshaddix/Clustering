@@ -1,3 +1,4 @@
+// HLS_Adjusted_Attempt1.cpp
 #include <ap_int.h>
 #include <hls_stream.h>
 
@@ -12,18 +13,18 @@ struct Hit {
     ap_uint<POSITION_BITS> position;
 };
 
-// Simplify processing to avoid potential dependencies
 void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit outputClusters[MAX_CLUSTERS], int& outputClusterCount) {
     #pragma HLS INTERFACE s_axilite port=return
     #pragma HLS INTERFACE s_axilite port=inputHitCount
     #pragma HLS INTERFACE s_axilite port=outputClusterCount
     #pragma HLS INTERFACE m_axi depth=MAX_HITS port=inputBinaries
     #pragma HLS INTERFACE m_axi depth=MAX_CLUSTERS port=outputClusters
+    #pragma HLS ARRAY_PARTITION variable=inputBinaries complete dim=1
+    #pragma HLS ARRAY_PARTITION variable=outputClusters complete dim=1
 
     Hit hits[MAX_HITS];
-    int hitCount = 0; // Adjusted to directly use 'hits' without intermediate buffer
+    int hitCount = 0;
 
-    // Decode each binary input into hits
     for (int i = 0; i < inputHitCount; ++i) {
         #pragma HLS PIPELINE II=1
         ap_uint<MODULE_NUMBER_BITS> moduleNumber = inputBinaries[i] >> (16 - MODULE_NUMBER_BITS);
@@ -35,20 +36,18 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
         if (sizeBitmask[2] && hitCount < MAX_HITS) hits[hitCount++] = {moduleNumber, seedPosition + 3};
     }
 
-    outputClusterCount = 0; // Initialize final cluster count directly
+    outputClusterCount = 0;
 
-    // Directly process 'hits' array to form clusters, without using a local buffer
     for (int i = 0, currentClusterIndex = -1; i < hitCount; ++i) {
         #pragma HLS PIPELINE II=1
         bool isNewCluster = (i == 0) || !(hits[i].moduleNumber == hits[i-1].moduleNumber && hits[i].position == hits[i-1].position + 1);
-        
+
         if (isNewCluster) {
             currentClusterIndex++;
-            outputClusterCount++;
-        }
-
-        if (currentClusterIndex < MAX_CLUSTERS) {
-            outputClusters[currentClusterIndex] = hits[i]; // Direct assignment to output
+            if (currentClusterIndex < MAX_CLUSTERS) {
+                outputClusters[currentClusterIndex] = hits[i];
+                outputClusterCount++;
+            }
         }
     }
 }

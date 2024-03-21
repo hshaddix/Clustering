@@ -19,7 +19,7 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
     #pragma HLS INTERFACE m_axi depth=MAX_CLUSTERS port=outputClusters
 
     Hit hits[MAX_HITS];
-    int hitCount = 0; 
+    int hitCount = 0; // Adjusted to directly use 'hits' without intermediate buffer
 
     // Decode each binary input into hits
     for (int i = 0; i < inputHitCount; ++i) {
@@ -28,22 +28,30 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
         ap_uint<POSITION_BITS> seedPosition = (inputBinaries[i] & ((1 << POSITION_BITS) - 1));
         ap_uint<3> sizeBitmask = (inputBinaries[i] >> POSITION_BITS) & 0x7;
 
-        for (ap_uint<2> j = 0; j < 3; ++j) {
-            if (sizeBitmask[j] && hitCount < MAX_HITS) {
-                hits[hitCount++] = {moduleNumber, seedPosition + j + 1};
-            }
-        }
+        if (sizeBitmask[0] && hitCount < MAX_HITS) hits[hitCount++] = {moduleNumber, seedPosition + 1};
+        if (sizeBitmask[1] && hitCount < MAX_HITS) hits[hitCount++] = {moduleNumber, seedPosition + 2};
+        if (sizeBitmask[2] && hitCount < MAX_HITS) hits[hitCount++] = {moduleNumber, seedPosition + 3};
     }
 
-    outputClusterCount = 0;
+    outputClusterCount = 0; // Initialize final cluster count directly
+    ap_uint<MODULE_NUMBER_BITS> lastModuleNumber = 0;
+    ap_uint<POSITION_BITS> lastPosition = 0;
+    bool isNewCluster = true;
 
-    // Clustering logic adjusted to minimize dependencies
+    // Directly process 'hits' array to form clusters, using intermediate variables to reduce dependencies
     for (int i = 0; i < hitCount; ++i) {
         #pragma HLS PIPELINE II=1
-        if (i == 0 || hits[i].moduleNumber != hits[i-1].moduleNumber || hits[i].position != hits[i-1].position + 1) {
+        if (i > 0) {
+            isNewCluster = !(hits[i].moduleNumber == lastModuleNumber && hits[i].position == lastPosition + 1);
+        }
+
+        if (isNewCluster) {
             if (outputClusterCount < MAX_CLUSTERS) {
                 outputClusters[outputClusterCount++] = hits[i];
             }
         }
+
+        lastModuleNumber = hits[i].moduleNumber;
+        lastPosition = hits[i].position;
     }
 }

@@ -12,13 +12,14 @@ struct Hit {
     ap_uint<POSITION_BITS> position;
 };
 
-// Simplify processing to avoid potential dependencies
 void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit outputClusters[MAX_CLUSTERS], int& outputClusterCount) {
     #pragma HLS INTERFACE s_axilite port=return
     #pragma HLS INTERFACE s_axilite port=inputHitCount
     #pragma HLS INTERFACE s_axilite port=outputClusterCount
     #pragma HLS INTERFACE m_axi depth=MAX_HITS port=inputBinaries
     #pragma HLS INTERFACE m_axi depth=MAX_CLUSTERS port=outputClusters
+
+    #pragma HLS ARRAY_PARTITION variable=hits complete dim=1
 
     Hit hits[MAX_HITS];
     int hitCount = 0; // Adjusted to directly use 'hits' without intermediate buffer
@@ -51,4 +52,4 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
             outputClusters[currentClusterIndex] = hits[i]; // Direct assignment to output
         }
     }
-} 
+}

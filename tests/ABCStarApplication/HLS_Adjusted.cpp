@@ -19,9 +19,10 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
     #pragma HLS INTERFACE m_axi depth=MAX_HITS port=inputBinaries
     #pragma HLS INTERFACE m_axi depth=MAX_CLUSTERS port=outputClusters
 
-    #pragma HLS ARRAY_PARTITION variable=hits complete dim=1
-
     Hit hits[MAX_HITS];
+    // Place the ARRAY_PARTITION pragma after the array has been declared
+    #pragma HLS ARRAY_PARTITION variable=hits complete dim=1
+    
     int hitCount = 0; // Adjusted to directly use 'hits' without intermediate buffer
 
     // Decode each binary input into hits
@@ -48,8 +49,4 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
             outputClusterCount++;
         }
 
-        if (currentClusterIndex < MAX_CLUSTERS) {
-            outputClusters[currentClusterIndex] = hits[i]; // Direct assignment to output
-        }
-    }
-}
+        if (

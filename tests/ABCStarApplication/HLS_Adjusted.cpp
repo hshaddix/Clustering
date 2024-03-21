@@ -3,7 +3,6 @@
 
 #define MAX_HITS 1024
 #define MAX_CLUSTERS 128
-#define STRIP_SIZE 126
 #define MODULE_NUMBER_BITS 11
 #define POSITION_BITS 8
 
@@ -19,39 +18,19 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
     #pragma HLS INTERFACE m_axi depth=MAX_HITS port=inputBinaries
     #pragma HLS INTERFACE m_axi depth=MAX_CLUSTERS port=outputClusters
 
-    Hit hits[MAX_HITS];
-    #pragma HLS ARRAY_PARTITION variable=hits complete dim=1
-
-    int hitCount = 0;
-
-    // Decode each binary input into hits
-    for (int i = 0; i < inputHitCount; ++i) {
+    // Simplification: Directly process and cluster inputBinaries without intermediate 'hits' array
+    outputClusterCount = 0;
+    for (int i = 0; i < inputHitCount && outputClusterCount < MAX_CLUSTERS; ++i) {
         #pragma HLS PIPELINE II=1
         ap_uint<MODULE_NUMBER_BITS> moduleNumber = inputBinaries[i] >> (16 - MODULE_NUMBER_BITS);
         ap_uint<POSITION_BITS> seedPosition = (inputBinaries[i] & ((1 << POSITION_BITS) - 1));
         ap_uint<3> sizeBitmask = (inputBinaries[i] >> POSITION_BITS) & 0x7;
 
-        if (sizeBitmask[0] && hitCount < MAX_HITS) hits[hitCount++] = {moduleNumber, seedPosition + 1};
-        if (sizeBitmask[1] && hitCount < MAX_HITS) hits[hitCount++] = {moduleNumber, seedPosition + 2};
-        if (sizeBitmask[2] && hitCount < MAX_HITS) hits[hitCount++] = {moduleNumber, seedPosition + 3};
-    }
-
-    outputClusterCount = 0;
-
-    // Directly process 'hits' array to form clusters, without using a local buffer
-    for (int i = 0, currentClusterIndex = -1; i < hitCount; ++i) {
-        #pragma HLS PIPELINE II=1
-        bool isNewCluster = (i == 0) || !(hits[i].moduleNumber == hits[i-1].moduleNumber && hits[i].position == hits[i-1].position + 1);
-        
-        if (isNewCluster) {
-            if (currentClusterIndex < MAX_CLUSTERS - 1) {
-                currentClusterIndex++;
-                outputClusterCount++;
+        for (ap_uint<2> j = 0; j < 3; ++j) {
+            if (sizeBitmask[j] && outputClusterCount < MAX_CLUSTERS) {
+                Hit newHit = {moduleNumber, seedPosition + j + 1};
+                outputClusters[outputClusterCount++] = newHit;
             }
-        }
-
-        if (currentClusterIndex < MAX_CLUSTERS) {
-            outputClusters[currentClusterIndex] = hits[i];
         }
     }
 }

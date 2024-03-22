@@ -12,43 +12,50 @@ struct Hit {
     ap_uint<POSITION_BITS> position;
 };
 
-// Simplify processing to avoid potential dependencies
 void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit outputClusters[MAX_CLUSTERS], int& outputClusterCount) {
     #pragma HLS INTERFACE s_axilite port=return
     #pragma HLS INTERFACE s_axilite port=inputHitCount
     #pragma HLS INTERFACE s_axilite port=outputClusterCount
     #pragma HLS INTERFACE m_axi depth=MAX_HITS port=inputBinaries
     #pragma HLS INTERFACE m_axi depth=MAX_CLUSTERS port=outputClusters
-
+    
     Hit hits[MAX_HITS];
-    int hitCount = 0; // Adjusted to directly use 'hits' without intermediate buffer
+    int hitCount = 0;
 
-    // Decode each binary input into hits
-    for (int i = 0; i < inputHitCount; ++i) {
+    DecodeLoop: for (int i = 0; i < inputHitCount; ++i) {
         #pragma HLS PIPELINE II=1
-        ap_uint<MODULE_NUMBER_BITS> moduleNumber = inputBinaries[i] >> (16 - MODULE_NUMBER_BITS);
-        ap_uint<POSITION_BITS> seedPosition = (inputBinaries[i] & ((1 << POSITION_BITS) - 1));
-        ap_uint<3> sizeBitmask = (inputBinaries[i] >> POSITION_BITS) & 0x7;
+        const ap_uint<16> inputBinary = inputBinaries[i];
+        const ap_uint<MODULE_NUMBER_BITS> moduleNumber = inputBinary >> (16 - MODULE_NUMBER_BITS);
+        const ap_uint<POSITION_BITS> seedPosition = inputBinary & ((1 << POSITION_BITS) - 1);
+        const ap_uint<3> sizeBitmask = (inputBinary >> POSITION_BITS) & 0x7;
 
-        if (sizeBitmask[0] && hitCount < MAX_HITS) hits[hitCount++] = {moduleNumber, seedPosition + 3};
-        if (sizeBitmask[1] && hitCount < MAX_HITS) hits[hitCount++] = {moduleNumber, seedPosition + 2};
-        if (sizeBitmask[2] && hitCount < MAX_HITS) hits[hitCount++] = {moduleNumber, seedPosition + 1};
+        // Preprocess the bitmask to determine the positions of additional hits
+        // This approach directly calculates each hit's position based on the bitmask without referring to previously calculated hits
+        for (ap_uint<2> j = 0; j < 3; ++j) {
+            if (sizeBitmask[j]) { // Check if the bit is set, indicating an adjacent hit
+                const ap_uint<POSITION_BITS> hitPosition = seedPosition + (j + 1);
+                if (hitCount < MAX_HITS) {
+                    hits[hitCount++] = {moduleNumber, hitPosition};
+                }
+            }
+        }
     }
 
-    outputClusterCount = 0; // Initialize final cluster count directly
+    outputClusterCount = 0;
+    Hit lastHit = {0xFFFFFFFF, 0xFFFFFFFF}; // Initialize with an invalid value
 
-    // Directly process 'hits' array to form clusters, without using a local buffer
-    for (int i = 0, currentClusterIndex = -1; i < hitCount; ++i) {
+    ClusterFormationLoop: for (int i = 0; i < hitCount; ++i) {
         #pragma HLS PIPELINE II=1
-        bool isNewCluster = (i == 0) || !(hits[i].moduleNumber == hits[i-1].moduleNumber && hits[i].position == hits[i-1].position + 1);
-        
-        if (isNewCluster) {
-            currentClusterIndex++;
+        const bool isNewCluster = (i == 0) || !(hits[i].moduleNumber == lastHit.moduleNumber && hits[i].position == lastHit.position + 1);
+
+        if (isNewCluster && outputClusterCount < MAX_CLUSTERS) {
             outputClusterCount++;
         }
 
-        if (currentClusterIndex < MAX_CLUSTERS) {
-            outputClusters[currentClusterIndex] = hits[i]; // Direct assignment to output
+        if (outputClusterCount > 0 && outputClusterCount <= MAX_CLUSTERS) {
+            outputClusters[outputClusterCount - 1] = hits[i];
         }
+
+        lastHit = hits[i]; // Update last hit for next iteration comparison
     }
-} 
+}

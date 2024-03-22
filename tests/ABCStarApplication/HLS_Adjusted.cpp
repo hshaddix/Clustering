@@ -20,8 +20,11 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
     #pragma HLS INTERFACE m_axi depth=MAX_CLUSTERS port=outputClusters
     
     Hit hits[MAX_HITS];
+    #pragma HLS ARRAY_PARTITION variable=hits complete dim=1
+    
     int hitCount = 0;
 
+    // Decode each binary input into hits
     DecodeLoop: for (int i = 0; i < inputHitCount; ++i) {
         #pragma HLS PIPELINE II=1
         const ap_uint<16> inputBinary = inputBinaries[i];
@@ -29,10 +32,8 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
         const ap_uint<POSITION_BITS> seedPosition = inputBinary & ((1 << POSITION_BITS) - 1);
         const ap_uint<3> sizeBitmask = (inputBinary >> POSITION_BITS) & 0x7;
 
-        // Preprocess the bitmask to determine the positions of additional hits
-        // This approach directly calculates each hit's position based on the bitmask without referring to previously calculated hits
         for (ap_uint<2> j = 0; j < 3; ++j) {
-            if (sizeBitmask[j]) { // Check if the bit is set, indicating an adjacent hit
+            if (sizeBitmask[j]) {
                 const ap_uint<POSITION_BITS> hitPosition = seedPosition + (j + 1);
                 if (hitCount < MAX_HITS) {
                     hits[hitCount++] = {moduleNumber, hitPosition};
@@ -42,20 +43,33 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
     }
 
     outputClusterCount = 0;
-    Hit lastHit = {0xFFFFFFFF, 0xFFFFFFFF}; // Initialize with an invalid value
+    ap_uint<MODULE_NUMBER_BITS> lastModuleNumber = 0;
+    ap_uint<POSITION_BITS> lastPosition = 0;
+    bool isFirstHit = true; // Introduced to handle the first hit separately
 
+    // Process 'hits' array to form clusters, optimized to reduce dependencies
     ClusterFormationLoop: for (int i = 0; i < hitCount; ++i) {
         #pragma HLS PIPELINE II=1
-        const bool isNewCluster = (i == 0) || !(hits[i].moduleNumber == lastHit.moduleNumber && hits[i].position == lastHit.position + 1);
+        bool isNewCluster = false;
+        
+        // Check if it is the first hit or if the current hit does not belong to the current cluster
+        if (isFirstHit || hits[i].moduleNumber != lastModuleNumber || hits[i].position != lastPosition + 1) {
+            isNewCluster = true;
+            isFirstHit = false; // Reset for subsequent iterations
+        }
 
-        if (isNewCluster && outputClusterCount < MAX_CLUSTERS) {
+        // If it's a new cluster, increase the count and store the hit
+        if (isNewCluster) {
             outputClusterCount++;
         }
 
-        if (outputClusterCount > 0 && outputClusterCount <= MAX_CLUSTERS) {
+        // Ensure we don't exceed the cluster limit
+        if (outputClusterCount <= MAX_CLUSTERS) {
             outputClusters[outputClusterCount - 1] = hits[i];
         }
 
-        lastHit = hits[i]; // Update last hit for next iteration comparison
+        // Update for next iteration
+        lastModuleNumber = hits[i].moduleNumber;
+        lastPosition = hits[i].position;
     }
 }

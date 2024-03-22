@@ -4,39 +4,48 @@
 #define MAX_HITS 1024
 #define MAX_CLUSTERS 128
 #define STRIP_SIZE 126
-#define STRIP_NUMBER_BITS 11
+#define MODULE_NUMBER_BITS 11
 #define POSITION_BITS 8
 
 struct Hit {
-    ap_uint<STRIP_NUMBER_BITS> stripNumber;
+    ap_uint<MODULE_NUMBER_BITS> moduleNumber;
     ap_uint<POSITION_BITS> position;
 };
 
 // Top function prototype declaration
 void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit outputClusters[MAX_CLUSTERS], int& outputClusterCount);
 
-void decodeSize(ap_uint<3> bitmask, int seedPosition, int stripNumber, Hit hits[MAX_HITS], int& hitCount) {
+void decodeSize(ap_uint<3> bitmask, int seedPosition, int moduleNumber, Hit hits[MAX_HITS], int& hitCount) {
     #pragma HLS INLINE
-    if (bitmask[0]) hits[hitCount++] = {stripNumber, seedPosition + 3};
-    if (bitmask[1]) hits[hitCount++] = {stripNumber, seedPosition + 2};
-    if (bitmask[2]) hits[hitCount++] = {stripNumber, seedPosition + 1};
+    Hit tempHits[3]; // Temporary buffer to hold hits for a single binary input
+    int tempHitCount = 0;
+    
+    if (bitmask[0]) tempHits[tempHitCount++] = {moduleNumber, seedPosition + 3};
+    if (bitmask[1]) tempHits[tempHitCount++] = {moduleNumber, seedPosition + 2};
+    if (bitmask[2]) tempHits[tempHitCount++] = {moduleNumber, seedPosition + 1};
+
+    // Append decoded hits to the main hits array
+    for (int i = 0; i < tempHitCount; i++) {
+        #pragma HLS UNROLL
+        hits[hitCount++] = tempHits[i];
+    }
 }
 
 void mergeClusters(Hit hits[MAX_HITS], int hitCount, Hit outputClusters[MAX_CLUSTERS], int& finalClusterCount) {
     #pragma HLS INLINE
     finalClusterCount = 0; // Initialize final cluster count
-    int currentClusterIndex = -1; // Initialize to -1 to correctly handle the first hit as a new cluster
+    Hit previousHit = {0, 0}; // Store the previous hit to compare with the current hit
 
     for (int i = 0; i < hitCount; ++i) {
         #pragma HLS PIPELINE II=1
-        bool isNewCluster = (i == 0) || !(hits[i].stripNumber == hits[i-1].stripNumber && hits[i].position == hits[i-1].position + 1);
+        bool isNewCluster = (i == 0) || !(hits[i].moduleNumber == previousHit.moduleNumber && hits[i].position == previousHit.position + 1);
+
         if (isNewCluster) {
-            currentClusterIndex++;
-            finalClusterCount++; // Increment the cluster count for each new cluster
+            if (finalClusterCount < MAX_CLUSTERS) {
+                outputClusters[finalClusterCount++] = hits[i]; // Assign hit to a new cluster
+            }
         }
-        if (currentClusterIndex < MAX_CLUSTERS) {
-            outputClusters[currentClusterIndex] = hits[i]; // Assign hit to the current cluster
-        }
+        previousHit = hits[i]; // Update the previous hit
     }
 }
 
@@ -53,11 +62,11 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
     // Decode each binary input into hits
     for (int i = 0; i < inputHitCount; i++) {
         #pragma HLS PIPELINE II=1
-        ap_uint<STRIP_NUMBER_BITS> stripNumber = inputBinaries[i] >> (16 - STRIP_NUMBER_BITS);
+        ap_uint<MODULE_NUMBER_BITS> moduleNumber = inputBinaries[i] >> (16 - MODULE_NUMBER_BITS);
         ap_uint<POSITION_BITS> seedPosition = (inputBinaries[i] & ((1 << POSITION_BITS) - 1));
         ap_uint<3> sizeBitmask = (inputBinaries[i] >> POSITION_BITS) & 0x7;
 
-        decodeSize(sizeBitmask, seedPosition.to_int(), stripNumber.to_int(), hits, hitCount);
+        decodeSize(sizeBitmask, seedPosition.to_int(), moduleNumber.to_int(), hits, hitCount);
     }
 
     // Merge adjacent hits into clusters

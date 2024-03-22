@@ -3,6 +3,7 @@
 
 #define MAX_HITS 1024
 #define MAX_CLUSTERS 128
+#define STRIP_SIZE 126
 #define MODULE_NUMBER_BITS 11
 #define POSITION_BITS 8
 
@@ -11,6 +12,7 @@ struct Hit {
     ap_uint<POSITION_BITS> position;
 };
 
+// Simplify processing to avoid potential dependencies
 void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit outputClusters[MAX_CLUSTERS], int& outputClusterCount) {
     #pragma HLS INTERFACE s_axilite port=return
     #pragma HLS INTERFACE s_axilite port=inputHitCount
@@ -34,24 +36,19 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
     }
 
     outputClusterCount = 0; // Initialize final cluster count directly
-    ap_uint<MODULE_NUMBER_BITS> lastModuleNumber = 0;
-    ap_uint<POSITION_BITS> lastPosition = 0;
-    bool isNewCluster = true;
 
-    // Directly process 'hits' array to form clusters, using intermediate variables to reduce dependencies
-    for (int i = 0; i < hitCount; ++i) {
+    // Directly process 'hits' array to form clusters, without using a local buffer
+    for (int i = 0, currentClusterIndex = -1; i < hitCount; ++i) {
         #pragma HLS PIPELINE II=1
-        if (i > 0) {
-            isNewCluster = !(hits[i].moduleNumber == lastModuleNumber && hits[i].position == lastPosition + 1);
-        }
-
+        bool isNewCluster = (i == 0) || !(hits[i].moduleNumber == hits[i-1].moduleNumber && hits[i].position == hits[i-1].position + 1);
+        
         if (isNewCluster) {
-            if (outputClusterCount < MAX_CLUSTERS) {
-                outputClusters[outputClusterCount++] = hits[i];
-            }
+            currentClusterIndex++;
+            outputClusterCount++;
         }
 
-        lastModuleNumber = hits[i].moduleNumber;
-        lastPosition = hits[i].position;
+        if (currentClusterIndex < MAX_CLUSTERS) {
+            outputClusters[currentClusterIndex] = hits[i]; // Direct assignment to output
+        }
     }
-}
+} 

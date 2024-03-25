@@ -11,10 +11,19 @@ struct Hit {
     ap_uint<POSITION_BITS> position;
 };
 
+// Function for adding hits from bitmask variable from j values
+void BitmaskHelper(ap_uint<MODULE_NUMBER_BITS> moduleNumber, ap_uint<POSITION_BITS> hitPosition, int &hitCount, Hit hits[MAX_HITS], ap_uint<1> newClusterStart[MAX_HITS]) {
+    hits[hitCount] = {moduleNumber, hitPosition};
+    // Mark the start of a new cluster based on conditions
+    if (hitCount == 0 || !(moduleNumber == hits[hitCount-1].moduleNumber && hitPosition == hits[hitCount-1].position + 1)) {
+        newClusterStart[hitCount] = 1;
+    }
+    hitCount++;
+}
+
 // Function to process hits and cluster them
 void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit outputClusters[MAX_CLUSTERS], int& outputClusterCount) {
-    // Interface pragmas are commented out as before
-    
+
     Hit hits[MAX_HITS]; // Buffer to store decoded hits
     ap_uint<1> newClusterStart[MAX_HITS] = {0}; // Indicates the start of a new cluster
     int hitCount = 0; // Total number of hits after decoding
@@ -22,37 +31,20 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
     // Decode input binaries into hits and determine cluster starts
     DecodeLoop: for (int i = 0; i < inputHitCount; ++i) {
         #pragma HLS PIPELINE
-        ap_uint<16> inputBinary = inputBinaries[i];
+        const ap_uint<16> inputBinary = inputBinaries[i];
         ap_uint<MODULE_NUMBER_BITS> moduleNumber = inputBinary >> (16 - MODULE_NUMBER_BITS);
         ap_uint<POSITION_BITS> seedPosition = inputBinary & ((1 << POSITION_BITS) - 1);
-        ap_uint<3> sizeBitmask = (inputBinary >> POSITION_BITS) & 0x7;
+        const ap_uint<3> sizeBitmask = (inputBinary >> POSITION_BITS) & 0x7;
 
-        // Manually unrolled loop for j=0
+        // Directly unrolled processing for j=0, j=1, and j=2
         if (sizeBitmask[0] && hitCount < MAX_HITS) {
-            ap_uint<POSITION_BITS> hitPosition = seedPosition + 1;
-            hits[hitCount] = {moduleNumber, hitPosition};
-            if (hitCount == 0 || !(moduleNumber == hits[hitCount-1].moduleNumber && hitPosition == hits[hitCount-1].position + 1)) {
-                newClusterStart[hitCount] = 1;
-            }
-            hitCount++;
+            BitmaskHelper(moduleNumber, seedPosition + 1, hitCount, hits, newClusterStart);
         }
-        // Manually unrolled loop for j=1
         if (sizeBitmask[1] && hitCount < MAX_HITS) {
-            ap_uint<POSITION_BITS> hitPosition = seedPosition + 2;
-            hits[hitCount] = {moduleNumber, hitPosition};
-            if (hitCount == 0 || !(moduleNumber == hits[hitCount-1].moduleNumber && hitPosition == hits[hitCount-1].position + 1)) {
-                newClusterStart[hitCount] = 1;
-            }
-            hitCount++;
+            BitmaskHelper(moduleNumber, seedPosition + 2, hitCount, hits, newClusterStart);
         }
-        // Manually unrolled loop for j=2
         if (sizeBitmask[2] && hitCount < MAX_HITS) {
-            ap_uint<POSITION_BITS> hitPosition = seedPosition + 3;
-            hits[hitCount] = {moduleNumber, hitPosition};
-            if (hitCount == 0 || !(moduleNumber == hits[hitCount-1].moduleNumber && hitPosition == hits[hitCount-1].position + 1)) {
-                newClusterStart[hitCount] = 1;
-            }
-            hitCount++;
+            BitmaskHelper(moduleNumber, seedPosition + 3, hitCount, hits, newClusterStart);
         }
     }
 

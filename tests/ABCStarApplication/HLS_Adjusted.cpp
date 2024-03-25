@@ -22,10 +22,10 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
     // Decode input binaries into hits and determine cluster starts
     DecodeLoop: for (int i = 0; i < inputHitCount; ++i) {
         #pragma HLS PIPELINE
-        const ap_uint<16> inputBinary = inputBinaries[i];
-        const ap_uint<MODULE_NUMBER_BITS> moduleNumber = inputBinary >> (16 - MODULE_NUMBER_BITS);
-        const ap_uint<POSITION_BITS> seedPosition = inputBinary & ((1 << POSITION_BITS) - 1);
-        const ap_uint<3> sizeBitmask = (inputBinary >> POSITION_BITS) & 0x7;
+        ap_uint<16> inputBinary = inputBinaries[i];
+        ap_uint<MODULE_NUMBER_BITS> moduleNumber = inputBinary >> (16 - MODULE_NUMBER_BITS);
+        ap_uint<POSITION_BITS> seedPosition = inputBinary & ((1 << POSITION_BITS) - 1);
+        ap_uint<3> sizeBitmask = (inputBinary >> POSITION_BITS) & 0x7;
 
         // Manually unrolled loop for j=0
         if (sizeBitmask[0] && hitCount < MAX_HITS) {

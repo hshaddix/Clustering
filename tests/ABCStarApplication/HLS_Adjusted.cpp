@@ -32,16 +32,16 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
         const ap_uint<POSITION_BITS> seedPosition = inputBinary & ((1 << POSITION_BITS) - 1);
         const ap_uint<3> sizeBitmask = (inputBinary >> POSITION_BITS) & 0x7;
 
-        for (ap_uint<2> j = 0; j < 3; ++j) {
-            if (sizeBitmask[j] && hitCount < MAX_HITS) {
-                const ap_uint<POSITION_BITS> hitPosition = seedPosition + (j + 1);
-                hits[hitCount] = {moduleNumber, hitPosition};
-                // Mark the start of a new cluster for the first hit or when there's a break in continuity
-                if (hitCount == 0 || !(moduleNumber == hits[hitCount-1].moduleNumber && hitPosition == hits[hitCount-1].position + 1)) {
-                    newClusterStart[hitCount] = 1;
-                }
-                hitCount++;
+        // Simplified loop, always setting j=0
+        const ap_uint<2> j = 0;
+        if (sizeBitmask[j] && hitCount < MAX_HITS) {
+            ap_uint<POSITION_BITS> hitPosition = seedPosition + (j + 1);
+            hits[hitCount] = {moduleNumber, hitPosition};
+            // Mark the start of a new cluster for the first hit or when there's a break in continuity
+            if (hitCount == 0 || !(moduleNumber == hits[hitCount-1].moduleNumber && hitPosition == hits[hitCount-1].position + 1)) {
+                newClusterStart[hitCount] = 1;
             }
+            hitCount++;
         }
     }
 

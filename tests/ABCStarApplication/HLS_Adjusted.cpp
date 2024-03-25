@@ -13,32 +13,43 @@ struct Hit {
 
 // Function to process hits and cluster them
 void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit outputClusters[MAX_CLUSTERS], int& outputClusterCount) {
+    // Interface pragmas are commented out as before
+    
     Hit hits[MAX_HITS]; // Buffer to store decoded hits
     ap_uint<1> newClusterStart[MAX_HITS] = {0}; // Indicates the start of a new cluster
     int hitCount = 0; // Total number of hits after decoding
 
+    // Decode input binaries into hits and determine cluster starts
     DecodeLoop: for (int i = 0; i < inputHitCount; ++i) {
-        #pragma HLS PIPELINE 
+        #pragma HLS PIPELINE
         const ap_uint<16> inputBinary = inputBinaries[i];
-        ap_uint<MODULE_NUMBER_BITS> moduleNumber = inputBinary >> (16 - MODULE_NUMBER_BITS);
-        ap_uint<POSITION_BITS> seedPosition = inputBinary & ((1 << POSITION_BITS) - 1);
-        ap_uint<3> sizeBitmask = (inputBinary >> POSITION_BITS) & 0x7;
+        const ap_uint<MODULE_NUMBER_BITS> moduleNumber = inputBinary >> (16 - MODULE_NUMBER_BITS);
+        const ap_uint<POSITION_BITS> seedPosition = inputBinary & ((1 << POSITION_BITS) - 1);
+        const ap_uint<3> sizeBitmask = (inputBinary >> POSITION_BITS) & 0x7;
 
-        // Pre-calculate hit positions based on the sizeBitmask
-        Hit potentialHits[3];
-        int numHitsToAdd = 0;
-
-        for (int j = 0; j < 3; ++j) {
-            if (sizeBitmask[j] && hitCount + numHitsToAdd < MAX_HITS) {
-                potentialHits[numHitsToAdd++] = {moduleNumber, seedPosition + (j + 1)};
+        // Manually unrolled loop for j=0
+        if (sizeBitmask[0] && hitCount < MAX_HITS) {
+            ap_uint<POSITION_BITS> hitPosition = seedPosition + 1;
+            hits[hitCount] = {moduleNumber, hitPosition};
+            if (hitCount == 0 || !(moduleNumber == hits[hitCount-1].moduleNumber && hitPosition == hits[hitCount-1].position + 1)) {
+                newClusterStart[hitCount] = 1;
             }
+            hitCount++;
         }
-
-        // Add all pre-calculated hit positions to the hits array
-        for (int j = 0; j < numHitsToAdd; ++j) {
-            hits[hitCount] = potentialHits[j];
-            // Determine new cluster starts here as needed
-            if (hitCount == 0 || !(potentialHits[j].moduleNumber == hits[hitCount-1].moduleNumber && potentialHits[j].position == hits[hitCount-1].position + 1)) {
+        // Manually unrolled loop for j=1
+        if (sizeBitmask[1] && hitCount < MAX_HITS) {
+            ap_uint<POSITION_BITS> hitPosition = seedPosition + 2;
+            hits[hitCount] = {moduleNumber, hitPosition};
+            if (hitCount == 0 || !(moduleNumber == hits[hitCount-1].moduleNumber && hitPosition == hits[hitCount-1].position + 1)) {
+                newClusterStart[hitCount] = 1;
+            }
+            hitCount++;
+        }
+        // Manually unrolled loop for j=2
+        if (sizeBitmask[2] && hitCount < MAX_HITS) {
+            ap_uint<POSITION_BITS> hitPosition = seedPosition + 3;
+            hits[hitCount] = {moduleNumber, hitPosition};
+            if (hitCount == 0 || !(moduleNumber == hits[hitCount-1].moduleNumber && hitPosition == hits[hitCount-1].position + 1)) {
                 newClusterStart[hitCount] = 1;
             }
             hitCount++;
@@ -52,8 +63,10 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
     ClusterAssignmentLoop: for (int i = 0; i < hitCount; ++i) {
         #pragma HLS PIPELINE
         if (newClusterStart[i] && i > 0 && outputClusterCount < MAX_CLUSTERS) {
+            // Increment cluster count at the start of a new cluster
             outputClusterCount++;
         }
+        // Assign hit to the current cluster, ensuring we do not exceed the cluster array
         if (outputClusterCount > 0 && outputClusterCount <= MAX_CLUSTERS) {
             outputClusters[outputClusterCount - 1] = hits[i];
         }

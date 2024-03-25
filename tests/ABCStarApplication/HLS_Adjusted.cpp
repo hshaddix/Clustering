@@ -3,7 +3,6 @@
 
 #define MAX_HITS 1024
 #define MAX_CLUSTERS 128
-#define STRIP_SIZE 126
 #define MODULE_NUMBER_BITS 11
 #define POSITION_BITS 8
 
@@ -15,7 +14,7 @@ struct Hit {
 // Function to process hits and cluster them
 void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit outputClusters[MAX_CLUSTERS], int& outputClusterCount) {
     // Interface pragmas are commented out as before
-    
+
     Hit hits[MAX_HITS]; // Buffer to store decoded hits
     ap_uint<1> newClusterStart[MAX_HITS] = {0}; // Indicates the start of a new cluster
     int hitCount = 0; // Total number of hits after decoding
@@ -31,12 +30,17 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
         for (ap_uint<2> j = 0; j < 3; ++j) {
             if (sizeBitmask[j] && hitCount < MAX_HITS) {
                 ap_uint<POSITION_BITS> hitPosition = seedPosition + (j + 1);
-                hits[hitCount] = {moduleNumber, hitPosition};
-                // Mark the start of a new cluster for the first hit or when there's a break in continuity
-                if (hitCount == 0 || !(moduleNumber == hits[hitCount-1].moduleNumber && hitPosition == hits[hitCount-1].position + 1)) {
+                // Temporarily store hit information
+                Hit tempHit = {moduleNumber, hitPosition};
+
+                // Temporarily determine if this is a new cluster start
+                bool isClusterStart = (hitCount == 0) || !(tempHit.moduleNumber == hits[hitCount-1].moduleNumber && tempHit.position == hits[hitCount-1].position + 1);
+
+                // Only then, commit to global state changes
+                if (isClusterStart) {
                     newClusterStart[hitCount] = 1;
                 }
-                hitCount++;
+                hits[hitCount++] = tempHit;
             }
         }
     }

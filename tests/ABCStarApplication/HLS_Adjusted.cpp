@@ -27,7 +27,7 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
         const ap_uint<POSITION_BITS> seedPosition = inputBinary & ((1 << POSITION_BITS) - 1);
         const ap_uint<3> sizeBitmask = (inputBinary >> POSITION_BITS) & 0x7;
 
-        // Manually unrolled loop for j=0, j=1, and j=2
+        // Manually unrolled loop for j=0
         if (sizeBitmask[0] && hitCount < MAX_HITS) {
             ap_uint<POSITION_BITS> hitPosition = seedPosition + 1;
             hits[hitCount] = {moduleNumber, hitPosition};
@@ -36,6 +36,7 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
             }
             hitCount++;
         }
+        // Manually unrolled loop for j=1
         if (sizeBitmask[1] && hitCount < MAX_HITS) {
             ap_uint<POSITION_BITS> hitPosition = seedPosition + 2;
             hits[hitCount] = {moduleNumber, hitPosition};
@@ -44,6 +45,7 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
             }
             hitCount++;
         }
+        // Manually unrolled loop for j=2
         if (sizeBitmask[2] && hitCount < MAX_HITS) {
             ap_uint<POSITION_BITS> hitPosition = seedPosition + 3;
             hits[hitCount] = {moduleNumber, hitPosition};

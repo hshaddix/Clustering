@@ -3,12 +3,12 @@
 
 #define MAX_HITS 1024
 #define MAX_CLUSTERS 128
-#define MODULE_NUMBER_BITS 11
+#define ABCStar_ID_BITS 11
 #define POSITION_BITS 8
 #define MODULE_SIZE 128 // Assuming a fixed module size of 128 positions.
 
 struct Hit {
-    ap_uint<MODULE_NUMBER_BITS> moduleNumber;
+    ap_uint<ABCStar_ID_BITS> ABCStarID;
     ap_uint<POSITION_BITS> position;
 };
 
@@ -22,36 +22,36 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
     DecodeLoop: for (int i = 0; i < inputHitCount; ++i) {
         #pragma HLS PIPELINE
         ap_uint<16> inputBinary = inputBinaries[i];
-        ap_uint<MODULE_NUMBER_BITS> moduleNumber = inputBinary >> (16 - MODULE_NUMBER_BITS);
+        ap_uint<ABCStar_ID_BITS> ABCStarID = inputBinary >> (16 - ABCStar_ID_BITS);
         ap_uint<POSITION_BITS> seedPosition = inputBinary & ((1 << POSITION_BITS) - 1);
         ap_uint<3> sizeBitmask = (inputBinary >> POSITION_BITS) & 0x7;
 
         switch(sizeBitmask.to_uint()) {
             case 1: // 001
-                hits[hitCount++] = {moduleNumber, seedPosition + 3};
+                hits[hitCount++] = {ABCStarID, seedPosition + 3};
                 break;
             case 2: // 010
-                hits[hitCount++] = {moduleNumber, seedPosition + 2};
+                hits[hitCount++] = {ABCStarID, seedPosition + 2};
                 break;
             case 3: // 011
-                hits[hitCount++] = {moduleNumber, seedPosition + 2};
-                hits[hitCount++] = {moduleNumber, seedPosition + 3};
+                hits[hitCount++] = {ABCStarID, seedPosition + 2};
+                hits[hitCount++] = {ABCStarID, seedPosition + 3};
                 break;
             case 4: // 100
-                hits[hitCount++] = {moduleNumber, seedPosition + 1};
+                hits[hitCount++] = {ABCStarID, seedPosition + 1};
                 break;
             case 5: // 101
-                hits[hitCount++] = {moduleNumber, seedPosition + 1};
-                hits[hitCount++] = {moduleNumber, seedPosition + 3};
+                hits[hitCount++] = {ABCStarID, seedPosition + 1};
+                hits[hitCount++] = {ABCStarID, seedPosition + 3};
                 break;
             case 6: // 110
-                hits[hitCount++] = {moduleNumber, seedPosition + 1};
-                hits[hitCount++] = {moduleNumber, seedPosition + 2};
+                hits[hitCount++] = {ABCStarID, seedPosition + 1};
+                hits[hitCount++] = {ABCStarID, seedPosition + 2};
                 break;
             case 7: // 111
-                hits[hitCount++] = {moduleNumber, seedPosition + 1};
-                hits[hitCount++] = {moduleNumber, seedPosition + 2};
-                hits[hitCount++] = {moduleNumber, seedPosition + 3};
+                hits[hitCount++] = {ABCStarID, seedPosition + 1};
+                hits[hitCount++] = {ABCStarID, seedPosition + 2};
+                hits[hitCount++] = {ABCStarID, seedPosition + 3};
                 break;
             default: // 000 and any other unexpected case
                 break;
@@ -66,11 +66,11 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
             #pragma HLS PIPELINE
             bool isAdjacent = false;
             // Check adjacency within the same module
-            if (hits[i].moduleNumber == hits[i-1].moduleNumber && hits[i].position == hits[i-1].position + 1) {
+            if (hits[i].ABCStarID == hits[i-1].ABCStarID && hits[i].position == hits[i-1].position + 1) {
                 isAdjacent = true;
             }
             // Check adjacency across module boundaries
-            if (hits[i].moduleNumber == hits[i-1].moduleNumber + 1 && hits[i-1].position == MODULE_SIZE - 1 && hits[i].position == 0) {
+            if (hits[i].ABCStarID == hits[i-1].ABCStarID + 1 && hits[i-1].position == MODULE_SIZE - 1 && hits[i].position == 0) {
                 isAdjacent = true;
             }
             newClusterStart[i] = !isAdjacent;

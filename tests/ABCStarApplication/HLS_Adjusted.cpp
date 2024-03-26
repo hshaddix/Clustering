@@ -3,6 +3,7 @@
 
 #define MAX_HITS 1024
 #define MAX_CLUSTERS 128
+#define STRIP_SIZE 126
 #define MODULE_NUMBER_BITS 11
 #define POSITION_BITS 8
 
@@ -21,10 +22,10 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
     // Decode input binaries into hits and determine cluster starts
     DecodeLoop: for (int i = 0; i < inputHitCount; ++i) {
         #pragma HLS PIPELINE
-        const ap_uint<16> inputBinary = inputBinaries[i];
-        const ap_uint<MODULE_NUMBER_BITS> moduleNumber = inputBinary >> (16 - MODULE_NUMBER_BITS);
-        const ap_uint<POSITION_BITS> seedPosition = inputBinary & ((1 << POSITION_BITS) - 1);
-        const ap_uint<3> sizeBitmask = (inputBinary >> POSITION_BITS) & 0x7;
+        ap_uint<16> inputBinary = inputBinaries[i];
+        ap_uint<MODULE_NUMBER_BITS> moduleNumber = inputBinary >> (16 - MODULE_NUMBER_BITS);
+        ap_uint<POSITION_BITS> seedPosition = inputBinary & ((1 << POSITION_BITS) - 1);
+        ap_uint<3> sizeBitmask = (inputBinary >> POSITION_BITS) & 0x7;
 
         switch(sizeBitmask.to_uint()) {
             case 1: // 001
@@ -56,11 +57,6 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
             default: // 000 and any other unexpected case
                 break;
         }
-
-        // Mark the start of a new cluster as appropriate, adjust logic as necessary
-        if(hitCount > 0) {
-            newClusterStart[hitCount - 1] = 1; 
-        }
     }
 
     // Initialize cluster count based on whether there are any hits
@@ -68,7 +64,7 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
 
     // Assign hits to clusters based on pre-calculated flags
     ClusterAssignmentLoop: for (int i = 0; i < hitCount; ++i) {
-        #pragma HLS PIPELINE
+        #pragma HLS PIPELINE 
         if (newClusterStart[i] && i > 0 && outputClusterCount < MAX_CLUSTERS) {
             // Increment cluster count at the start of a new cluster
             outputClusterCount++;

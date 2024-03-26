@@ -27,16 +27,35 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
         ap_uint<POSITION_BITS> seedPosition = inputBinary & ((1 << POSITION_BITS) - 1);
         ap_uint<3> sizeBitmask = (inputBinary >> POSITION_BITS) & 0x7;
 
-        for (ap_uint<2> j = 0; j < 3; ++j) {
-            if (sizeBitmask[j] && hitCount < MAX_HITS) {
-                ap_uint<POSITION_BITS> hitPosition = seedPosition + (j + 1);
-                hits[hitCount] = {moduleNumber, hitPosition};
-                // Mark the start of a new cluster for the first hit or when there's a break in continuity
-                if (hitCount == 0 || !(moduleNumber == hits[hitCount-1].moduleNumber && hitPosition == hits[hitCount-1].position + 1)) {
-                    newClusterStart[hitCount] = 1;
-                }
-                hitCount++;
-            }
+        switch(sizeBitmask.to_uint()) {
+            case 1: // 001
+                hits[hitCount++] = {moduleNumber, seedPosition + 3};
+                break;
+            case 2: // 010
+                hits[hitCount++] = {moduleNumber, seedPosition + 2};
+                break;
+            case 3: // 011
+                hits[hitCount++] = {moduleNumber, seedPosition + 2};
+                hits[hitCount++] = {moduleNumber, seedPosition + 3};
+                break;
+            case 4: // 100
+                hits[hitCount++] = {moduleNumber, seedPosition + 1};
+                break;
+            case 5: // 101
+                hits[hitCount++] = {moduleNumber, seedPosition + 1};
+                hits[hitCount++] = {moduleNumber, seedPosition + 3};
+                break;
+            case 6: // 110
+                hits[hitCount++] = {moduleNumber, seedPosition + 1};
+                hits[hitCount++] = {moduleNumber, seedPosition + 2};
+                break;
+            case 7: // 111
+                hits[hitCount++] = {moduleNumber, seedPosition + 1};
+                hits[hitCount++] = {moduleNumber, seedPosition + 2};
+                hits[hitCount++] = {moduleNumber, seedPosition + 3};
+                break;
+            default: // 000 and any other unexpected case
+                break;
         }
     }
 

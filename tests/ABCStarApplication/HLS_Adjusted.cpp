@@ -3,7 +3,6 @@
 
 #define MAX_HITS 1024
 #define MAX_CLUSTERS 128
-#define STRIP_SIZE 126
 #define MODULE_NUMBER_BITS 11
 #define POSITION_BITS 8
 
@@ -26,6 +25,7 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
         ap_uint<POSITION_BITS> seedPosition = inputBinary & ((1 << POSITION_BITS) - 1);
         ap_uint<3> sizeBitmask = (inputBinary >> POSITION_BITS) & 0x7;
 
+        // Process hits based on bitmask
         switch(sizeBitmask.to_uint()) {
             case 1: // 001
                 hits[hitCount++] = {moduleNumber, seedPosition + 3};
@@ -56,30 +56,35 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
             default: // 000 and any other unexpected case
                 break;
         }
+    }
 
-        // Check adjacency and update newClusterStart for the newly added hits
-        for (int j = hitCount - 1; j >= 0 && newClusterStart[j] == 0; --j) {
-            newClusterStart[j] = 1; // Mark the start of a new cluster
-            outputClusterCount++;
-            if (j > 0) {
-                // Check if the current hit is adjacent to the previous hit
-                if (hits[j].moduleNumber == hits[j-1].moduleNumber && hits[j].position == hits[j-1].position + 1) {
-                    newClusterStart[j] = 0; // Not a new cluster start
-                    outputClusterCount--; // Adjust the cluster count
-                }
+    // Determine cluster starts based on adjacency
+    if (hitCount > 0) {
+        newClusterStart[0] = 1; // First hit always starts a new cluster
+        outputClusterCount = 1; // At least one cluster exists
+
+        for (int i = 1; i < hitCount; ++i) {
+            #pragma HLS PIPELINE
+            // Check if the current hit is adjacent to the previous hit within the same module
+            if (hits[i].moduleNumber == hits[i-1].moduleNumber && hits[i].position == hits[i-1].position + 1) {
+                newClusterStart[i] = 0; // Current hit is part of the existing cluster
+            } else {
+                newClusterStart[i] = 1; // Current hit starts a new cluster
+                outputClusterCount++; // Increment the cluster count
             }
         }
     }
 
-    // Assign hits to clusters based on pre-calculated flags
-    int clusterIndex = 0; // Initialize cluster index
+    // Populate outputClusters based on newClusterStart flags
+    int clusterIndex = 0;
     for (int i = 0; i < hitCount; ++i) {
         #pragma HLS PIPELINE
-        if (newClusterStart[i] && i > 0) {
-            clusterIndex++; // Move to next cluster
-        }
-        if (clusterIndex < MAX_CLUSTERS) {
-            outputClusters[clusterIndex] = hits[i]; // Assign hit to the current cluster
+        if (newClusterStart[i]) {
+            if (clusterIndex < MAX_CLUSTERS) {
+                // Assign the first hit of the new cluster
+                outputClusters[clusterIndex] = hits[i];
+                clusterIndex++;
+            }
         }
     }
 }

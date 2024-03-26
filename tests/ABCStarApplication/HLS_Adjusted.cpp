@@ -27,6 +27,8 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
         ap_uint<POSITION_BITS> seedPosition = inputBinary & ((1 << POSITION_BITS) - 1);
         ap_uint<3> sizeBitmask = (inputBinary >> POSITION_BITS) & 0x7;
 
+        int previousHitCount = hitCount;
+
         switch(sizeBitmask.to_uint()) {
             case 1: // 001
                 hits[hitCount++] = {moduleNumber, seedPosition + 3};
@@ -57,21 +59,25 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
             default: // 000 and any other unexpected case
                 break;
         }
+
+        // Check adjacency and update newClusterStart for the newly added hits
+        for (int j = previousHitCount; j < hitCount; ++j) {
+            if (j == 0 || hits[j].moduleNumber != hits[j-1].moduleNumber || hits[j].position != hits[j-1].position + 1) {
+                newClusterStart[j] = 1;
+                outputClusterCount++;
+            }
+        }
     }
 
-    // Initialize cluster count based on whether there are any hits
-    outputClusterCount = (hitCount > 0) ? 1 : 0;
-
     // Assign hits to clusters based on pre-calculated flags
-    ClusterAssignmentLoop: for (int i = 0; i < hitCount; ++i) {
+    int clusterIndex = -1;
+    for (int i = 0; i < hitCount; ++i) {
         #pragma HLS PIPELINE 
-        if (newClusterStart[i] && i > 0 && outputClusterCount < MAX_CLUSTERS) {
-            // Increment cluster count at the start of a new cluster
-            outputClusterCount++;
+        if (newClusterStart[i]) {
+            clusterIndex++;
         }
-        // Assign hit to the current cluster, ensuring we do not exceed the cluster array
-        if (outputClusterCount > 0 && outputClusterCount <= MAX_CLUSTERS) {
-            outputClusters[outputClusterCount - 1] = hits[i];
+        if (clusterIndex < MAX_CLUSTERS) {
+            outputClusters[clusterIndex] = hits[i];
         }
     }
 }

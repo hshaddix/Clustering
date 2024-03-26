@@ -14,10 +14,10 @@ struct Hit {
 
 // Function to process hits and cluster them
 void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit outputClusters[MAX_CLUSTERS], int& outputClusterCount) {
-    Hit hits[MAX_HITS];
-    ap_uint<1> newClusterStart[MAX_HITS] = {0};
-    int hitCount = 0;
-    outputClusterCount = 0;
+    Hit hits[MAX_HITS]; // Buffer to store decoded hits
+    ap_uint<1> newClusterStart[MAX_HITS] = {0}; // Indicates the start of a new cluster
+    int hitCount = 0; // Total number of hits after decoding
+    outputClusterCount = 0; // Initialize output cluster count
 
     DecodeLoop: for (int i = 0; i < inputHitCount; ++i) {
         #pragma HLS PIPELINE
@@ -26,7 +26,36 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
         ap_uint<POSITION_BITS> seedPosition = inputBinary & ((1 << POSITION_BITS) - 1);
         ap_uint<3> sizeBitmask = (inputBinary >> POSITION_BITS) & 0x7;
 
-        // Process hits based on bitmask, similar to your existing switch statement logic
+        switch(sizeBitmask.to_uint()) {
+            case 1: // 001
+                hits[hitCount++] = {moduleNumber, seedPosition + 3};
+                break;
+            case 2: // 010
+                hits[hitCount++] = {moduleNumber, seedPosition + 2};
+                break;
+            case 3: // 011
+                hits[hitCount++] = {moduleNumber, seedPosition + 2};
+                hits[hitCount++] = {moduleNumber, seedPosition + 3};
+                break;
+            case 4: // 100
+                hits[hitCount++] = {moduleNumber, seedPosition + 1};
+                break;
+            case 5: // 101
+                hits[hitCount++] = {moduleNumber, seedPosition + 1};
+                hits[hitCount++] = {moduleNumber, seedPosition + 3};
+                break;
+            case 6: // 110
+                hits[hitCount++] = {moduleNumber, seedPosition + 1};
+                hits[hitCount++] = {moduleNumber, seedPosition + 2};
+                break;
+            case 7: // 111
+                hits[hitCount++] = {moduleNumber, seedPosition + 1};
+                hits[hitCount++] = {moduleNumber, seedPosition + 2};
+                hits[hitCount++] = {moduleNumber, seedPosition + 3};
+                break;
+            default: // 000 and any other unexpected case
+                break;
+        }
     }
 
     // Determine cluster starts based on adjacency, including module boundaries

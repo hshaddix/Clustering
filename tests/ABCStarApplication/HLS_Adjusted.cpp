@@ -111,7 +111,7 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Cluster
         outputClusters[i].size = clusterSizes[i]; // Assign the calculated size of each cluster
     }
     outputClusterCount = numClusters + 1; // Update the total number of clusters identified
-    }
+
     // Ensure that outputClusterCount does not exceed MAX_CLUSTERS
     if (outputClusterCount > MAX_CLUSTERS) {
         outputClusterCount = MAX_CLUSTERS;

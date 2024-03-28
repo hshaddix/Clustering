@@ -58,18 +58,18 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
         }
     }
 
-    // Determine cluster starts based on adjacency, including module boundaries
+    // Determine cluster starts based on adjacency, including ABCStar boundaries
     if (hitCount > 0) {
         newClusterStart[0] = 1;
         outputClusterCount = 1;
         for (int i = 1; i < hitCount; ++i) {
             #pragma HLS PIPELINE
             bool isAdjacent = false;
-            // Check adjacency within the same module
+            // Check adjacency within the same ABCStar
             if (hits[i].ABCStarID == hits[i-1].ABCStarID && hits[i].position == hits[i-1].position + 1) {
                 isAdjacent = true;
             }
-            // Check adjacency across module boundaries
+            // Check adjacency across ABCStar boundaries
             if (hits[i].ABCStarID == hits[i-1].ABCStarID + 1 && hits[i-1].position == ABCStar_SIZE - 1 && hits[i].position == 0) {
                 isAdjacent = true;
             }

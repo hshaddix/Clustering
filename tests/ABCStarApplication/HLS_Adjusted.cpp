@@ -70,6 +70,7 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Cluster
     int numClusters = 0; // Number of clusters identified
     clusterSizes[0] = 1; // First cluster has at least one hit
 
+     int tempClusterSize = 1; // Temporary variable to accumulate the cluster size
     for (int i = 1; i < hitCount; ++i) {
         #pragma HLS PIPELINE
         bool isAdjacent = false;
@@ -83,31 +84,32 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Cluster
         }
         
         if (!isAdjacent) {
-            // Start a new cluster
-            clusterIndices[numClusters] = i;
-            numClusters++;
-            clusterSizes[numClusters] = 1; // Initialize the new cluster's size
+            // Not adjacent, finalize the current cluster's size
+            clusterSizes[numClusters] = tempClusterSize;
+            numClusters++; // Start a new cluster
+            clusterIndices[numClusters] = i; // Mark the new cluster's starting index
+            tempClusterSize = 1; // Reset for the new cluster
         } else {
-            // Increment the size of the current cluster
-            clusterSizes[numClusters]++;
+            // Increment the size for the ongoing cluster
+            tempClusterSize++;
         }
     }
     // Update the size of the last cluster after loop completion
     if(numClusters >= 0) {
-        clusterSizes[numClusters] = clusterSizes[numClusters]; // Finalize the size of the last cluster
+        clusterSizes[numClusters] = tempClusterSize;
     }
-
-    // Now, safely update outputClusters without causing II Violation
+    // Safely update outputClusters based on identified clusters
     for (int i = 0; i <= numClusters; ++i) {
         #pragma HLS PIPELINE
         outputClusters[i].firstHit = hits[clusterIndices[i]]; // Assign the first hit of each cluster
-        outputClusters[i].size = clusterSizes[i]; // Assign the size of each cluster
+        outputClusters[i].size = clusterSizes[i]; // Assign the calculated size of each cluster
     }
     outputClusterCount = numClusters + 1; // Update the total number of clusters identified
 
     // Ensure that outputClusterCount does not exceed MAX_CLUSTERS
-    if(outputClusterCount > MAX_CLUSTERS) {
+    if (outputClusterCount > MAX_CLUSTERS) {
         outputClusterCount = MAX_CLUSTERS;
     }
 }
+
 

@@ -15,6 +15,7 @@ struct Hit {
 struct ClusterInfo {
     Hit firstHit; // First hit in the cluster
     int size;     // Number of hits in the cluster
+    bool dataValid; // Data valid signal for each cluster info
 };
 
 // Function to process hits and cluster them
@@ -111,7 +112,10 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Cluster
         outputClusters[i].size = clusterSizes[i]; // Assign the calculated size of each cluster
     }
     outputClusterCount = numClusters + 1; // Update the total number of clusters identified
-
+    for (int i = 0; i < outputClusterCount; ++i) {
+        #pragma HLS PIPELINE
+        outputClusters[i].dataValid = true; // Mark data as valid
+    }
     // Ensure that outputClusterCount does not exceed MAX_CLUSTERS
     if (outputClusterCount > MAX_CLUSTERS) {
         outputClusterCount = MAX_CLUSTERS;

@@ -5,7 +5,7 @@
 #define MAX_CLUSTERS 128
 #define ABCStar_ID_BITS 11
 #define POSITION_BITS 8
-#define MODULE_SIZE 128 // Assuming a fixed module size of 128 positions.
+#define ABCStar_SIZE 128 // Assuming a fixed ABCStar size of 128 positions.
 
 struct Hit {
     ap_uint<ABCStar_ID_BITS> ABCStarID;
@@ -70,7 +70,7 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Hit out
                 isAdjacent = true;
             }
             // Check adjacency across module boundaries
-            if (hits[i].ABCStarID == hits[i-1].ABCStarID + 1 && hits[i-1].position == MODULE_SIZE - 1 && hits[i].position == 0) {
+            if (hits[i].ABCStarID == hits[i-1].ABCStarID + 1 && hits[i-1].position == ABCStar_SIZE - 1 && hits[i].position == 0) {
                 isAdjacent = true;
             }
             newClusterStart[i] = !isAdjacent;

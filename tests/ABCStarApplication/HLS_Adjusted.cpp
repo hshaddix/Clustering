@@ -31,6 +31,7 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Cluster
         ap_uint<POSITION_BITS> seedPosition = inputBinary & ((1 << POSITION_BITS) - 1);
         ap_uint<3> sizeBitmask = (inputBinary >> POSITION_BITS) & 0x7;
 
+        // Process hits based on bitmask
         switch(sizeBitmask.to_uint()) {
             case 1: // 001
                 hits[hitCount++] = {ABCStarID, seedPosition + 3};
@@ -63,37 +64,50 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Cluster
         }
     }
 
-    // Determine cluster starts based on adjacency, including ABCStar boundaries
-    if (hitCount > 0) {
-        int clusterSize = 1; // Initialize size for the first cluster
-        outputClusters[outputClusterCount].firstHit = hits[0]; // First cluster's first hit
-        outputClusterCount = 1;
-        
-        for (int i = 1; i < hitCount; ++i) {
-            #pragma HLS PIPELINE
-            bool isAdjacent = false;
-            // Check adjacency within the same ABCStar
-            if (hits[i].ABCStarID == hits[i-1].ABCStarID && hits[i].position == hits[i-1].position + 1) {
-                isAdjacent = true;
-            }
-            // Check adjacency across ABCStar boundaries
-            if (hits[i].ABCStarID == hits[i-1].ABCStarID + 1 && hits[i-1].position == ABCStar_SIZE - 1 && hits[i].position == 0) {
-                isAdjacent = true;
-            }
-            
-            if (!isAdjacent) {
-                // Previous cluster is complete; store its size
-                outputClusters[outputClusterCount - 1].size = clusterSize;
-                // Start a new cluster
-                outputClusters[outputClusterCount].firstHit = hits[i];
-                clusterSize = 1; // Reset size for the new cluster
-                outputClusterCount++;
-            } else {
-                // Increment the size for the current cluster
-                clusterSize++;
-            }
+    // Post-processing: Determine cluster starts based on adjacency, including ABCStar boundaries
+    int clusterIndices[MAX_HITS] = {0}; // Tracks the start index of each cluster
+    int clusterSizes[MAX_HITS] = {0}; // Tracks the size of each cluster
+    int numClusters = 0; // Number of clusters identified
+    clusterSizes[0] = 1; // First cluster has at least one hit
+
+       int tempClusterSize = 1; // Temporary variable to accumulate the cluster size
+    for (int i = 1; i < hitCount; ++i) {
+        #pragma HLS PIPELINE
+        bool isAdjacent = false;
+        // Check adjacency within the same ABCStar
+        if (hits[i].ABCStarID == hits[i-1].ABCStarID && hits[i].position == hits[i-1].position + 1) {
+            isAdjacent = true;
         }
-        // Update the size of the last cluster after the loop completes
-        outputClusters[outputClusterCount - 1].size = clusterSize;
+        // Check adjacency across ABCStar boundaries
+        if (hits[i].ABCStarID == hits[i-1].ABCStarID + 1 && hits[i-1].position == ABCStar_SIZE - 1 && hits[i].position == 0) {
+            isAdjacent = true;
+        }
+        
+        if (!isAdjacent) {
+            // Not adjacent, finalize the current cluster's size
+            clusterSizes[numClusters] = tempClusterSize;
+            numClusters++; // Start a new cluster
+            clusterIndices[numClusters] = i; // Mark the new cluster's starting index
+            tempClusterSize = 1; // Reset for the new cluster
+        } else {
+            // Increment the size for the ongoing cluster
+            tempClusterSize++;
+        }
+    }
+    // Update the size of the last cluster after loop completion
+    if(numClusters >= 0) {
+        clusterSizes[numClusters] = tempClusterSize;
+    }
+    // Safely update outputClusters based on identified clusters
+    for (int i = 0; i <= numClusters; ++i) {
+        #pragma HLS PIPELINE
+        outputClusters[i].firstHit = hits[clusterIndices[i]]; // Assign the first hit of each cluster
+        outputClusters[i].size = clusterSizes[i]; // Assign the calculated size of each cluster
+    }
+    outputClusterCount = numClusters + 1; // Update the total number of clusters identified
+
+    // Ensure that outputClusterCount does not exceed MAX_CLUSTERS
+    if (outputClusterCount > MAX_CLUSTERS) {
+        outputClusterCount = MAX_CLUSTERS;
     }
 }

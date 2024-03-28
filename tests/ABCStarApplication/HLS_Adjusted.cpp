@@ -19,11 +19,11 @@ struct ClusterInfo {
 
 // Function to process hits and cluster them
 void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, ClusterInfo outputClusters[MAX_CLUSTERS], int& outputClusterCount) {
-    #pragma HLS INTERFACE s_axilite port=return bundle=control
-    #pragma HLS INTERFACE s_axilite port=inputHitCount bundle=control
-    #pragma HLS INTERFACE s_axilite port=outputClusterCount bundle=control
-    #pragma HLS INTERFACE m_axi depth=MAX_HITS port=inputBinaries offset=slave bundle=DATA_BUS
-    #pragma HLS INTERFACE m_axi depth=MAX_CLUSTERS port=outputClusters offset=slave bundle=DATA_BUS
+    #pragma HLS INTERFACE s_axilite port=return
+    #pragma HLS INTERFACE s_axilite port=inputHitCount
+    #pragma HLS INTERFACE s_axilite port=outputClusterCount
+    #pragma HLS INTERFACE m_axi depth=MAX_HITS port=inputBinaries offset=slave
+    #pragma HLS INTERFACE m_axi depth=MAX_CLUSTERS port=outputClusters offset=slav
     
     Hit hits[MAX_HITS]; // Buffer to store decoded hits
     ap_uint<1> newClusterStart[MAX_HITS] = {0}; // Indicates the start of a new cluster

@@ -29,6 +29,7 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Cluster
     ap_uint<1> newClusterStart[MAX_HITS] = {0}; // Indicates the start of a new cluster
     int hitCount = 0; // Total number of hits after decoding
     outputClusterCount = 0; // Initialize output cluster count
+    bool errorFlag = false; // Error flag for cluster count exceeding MAX_CLUSTERS
 
     DecodeLoop: for (int i = 0; i < inputHitCount; ++i) {
         #pragma HLS PIPELINE
@@ -75,8 +76,8 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Cluster
     int clusterSizes[MAX_HITS] = {0}; // Tracks the size of each cluster
     int numClusters = 0; // Number of clusters identified
     clusterSizes[0] = 1; // First cluster has at least one hit
-
-       int tempClusterSize = 1; // Temporary variable to accumulate the cluster size
+    int tempClusterSize = 1; // Temporary variable to accumulate the cluster size
+    
     for (int i = 1; i < hitCount; ++i) {
         #pragma HLS PIPELINE
         bool isAdjacent = false;
@@ -101,19 +102,23 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Cluster
         }
     }
     // Update the size of the last cluster after loop completion
-    if(numClusters >= 0) {
-        clusterSizes[numClusters] = tempClusterSize;
-    }
+    clusterSizes[numClusters] = tempClusterSize;
+    
     // Safely update outputClusters based on identified clusters
     for (int i = 0; i <= numClusters; ++i) {
         #pragma HLS PIPELINE
-        outputClusters[i].firstHit = hits[clusterIndices[i]]; // Assign the first hit of each cluster
-        outputClusters[i].size = clusterSizes[i]; // Assign the calculated size of each cluster
+        if (i < MAX_CLUSTERS) {
+            outputClusters[i].firstHit = hits[clusterIndices[i]]; // Assign the first hit of each cluster
+            outputClusters[i].size = clusterSizes[i]; // Assign the calculated size of each cluster
+        } else {
+            errorFlag = true; // Set the error flag if exceeding MAX_CLUSTERS
+            break; // Optionally break out of the loop to stop processing further clusters
+        }
     }
     outputClusterCount = numClusters + 1; // Update the total number of clusters identified
 
-    // Ensure that outputClusterCount does not exceed MAX_CLUSTERS
-    if (outputClusterCount > MAX_CLUSTERS) {
+    // Check if an error occurred due to exceeding MAX_CLUSTERS
+    if (errorFlag) {
         outputClusterCount = MAX_CLUSTERS;
     }
 }

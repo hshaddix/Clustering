@@ -22,8 +22,8 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Cluster
     #pragma HLS INTERFACE s_axilite port=return
     #pragma HLS INTERFACE s_axilite port=inputHitCount
     #pragma HLS INTERFACE s_axilite port=outputClusterCount
-    #pragma HLS INTERFACE m_axiilite depth=MAX_HITS port=inputBinaries
-    #pragma HLS INTERFACE m_axilite depth=MAX_CLUSTERS port=outputClusters 
+    #pragma HLS INTERFACE s_axiilite depth=MAX_HITS port=inputBinaries
+    #pragma HLS INTERFACE s_axilite depth=MAX_CLUSTERS port=outputClusters 
     
     Hit hits[MAX_HITS]; // Buffer to store decoded hits
     ap_uint<1> newClusterStart[MAX_HITS] = {0}; // Indicates the start of a new cluster

@@ -2,7 +2,7 @@
 #include <hls_stream.h>
 
 #define MAX_HITS 1024
-#define MAX_CLUSTERS 128
+#define MAX_CLUSTERS 127
 #define ABCStar_ID_BITS 11
 #define POSITION_BITS 8
 #define ABCStar_SIZE 128 // Assuming a fixed ABCStar size of 128 positions.

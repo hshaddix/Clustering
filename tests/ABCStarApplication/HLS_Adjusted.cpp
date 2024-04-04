@@ -2,7 +2,7 @@
 #include <hls_stream.h>
 
 #define MAX_HITS 1024
-#define MAX_CLUSTERS 127 // Adjusted to ensure it matches with your setup
+#define MAX_CLUSTERS 127
 #define ABCStar_ID_BITS 11
 #define POSITION_BITS 8
 #define ABCStar_SIZE 128 // Assuming a fixed ABCStar size of 128 positions.
@@ -18,11 +18,10 @@ struct ClusterInfo {
 };
 
 // Function to process hits and cluster them
-void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, ClusterInfo outputClusters[MAX_CLUSTERS], int& outputClusterCount, bool &outputClusterCountValid) {
+void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, ClusterInfo outputClusters[MAX_CLUSTERS], int& outputClusterCount) {
     #pragma HLS INTERFACE s_axilite port=return
     #pragma HLS INTERFACE s_axilite port=inputHitCount
     #pragma HLS INTERFACE s_axilite port=outputClusterCount
-    #pragma HLS INTERFACE s_axilite port=outputClusterCountValid
     #pragma HLS INTERFACE s_axilite port=inputBinaries
     #pragma HLS INTERFACE s_axilite port=outputClusters 
     
@@ -30,7 +29,6 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Cluster
     ap_uint<1> newClusterStart[MAX_HITS] = {0}; // Indicates the start of a new cluster
     int hitCount = 0; // Total number of hits after decoding
     outputClusterCount = 0; // Initialize output cluster count
-    outputClusterCountValid = false; // Initialize the valid flag as false
     bool errorFlag = false; // Error flag for cluster count exceeding MAX_CLUSTERS
 
     DecodeLoop: for (int i = 0; i < inputHitCount; ++i) {
@@ -119,8 +117,8 @@ void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, Cluster
     }
     outputClusterCount = numClusters + 1; // Update the total number of clusters identified
 
-    // Set the outputClusterCountValid flag after processing is complete
-    if (!errorFlag) {
-        outputClusterCountValid = true;
+    // Check if an error occurred due to exceeding MAX_CLUSTERS
+    if (errorFlag) {
+        outputClusterCount = MAX_CLUSTERS;
     }
 }

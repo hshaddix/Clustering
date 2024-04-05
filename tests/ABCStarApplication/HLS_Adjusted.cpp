@@ -17,23 +17,32 @@ struct ClusterInfo {
     int size;     // Number of hits in the cluster
 };
 
+// Define a new struct for input data to encapsulate it in a stream
+struct InputData {
+    ap_uint<16> data;
+};
+
 // Function to process hits and cluster them
-void processHits(ap_uint<16> inputBinaries[MAX_HITS], int inputHitCount, ClusterInfo outputClusters[MAX_CLUSTERS], int& outputClusterCount) {
+void processHits(hls::stream<InputData> &inputBinariesStream, int inputHitCount, ClusterInfo outputClusters[MAX_CLUSTERS], int& outputClusterCount) {
     #pragma HLS INTERFACE s_axilite port=return
     #pragma HLS INTERFACE s_axilite port=inputHitCount
     #pragma HLS INTERFACE s_axilite port=outputClusterCount
-    #pragma HLS INTERFACE m_axi depth=MAX_HITS port=inputBinaries
-    #pragma HLS INTERFACE m_axi depth=MAX_CLUSTERS port=outputClusters 
-    
-    Hit hits[MAX_HITS]; // Buffer to store decoded hits
-    ap_uint<1> newClusterStart[MAX_HITS] = {0}; // Indicates the start of a new cluster
-    int hitCount = 0; // Total number of hits after decoding
-    outputClusterCount = 0; // Initialize output cluster count
-    bool errorFlag = false; // Error flag for cluster count exceeding MAX_CLUSTERS
+    #pragma HLS INTERFACE axis port=inputBinariesStream
+    #pragma HLS INTERFACE s_axilite port=outputClusters 
+
+    Hit hits[MAX_HITS];
+    int hitCount = 0;
+    outputClusterCount = 0;
+    bool errorFlag = false;
 
     DecodeLoop: for (int i = 0; i < inputHitCount; ++i) {
         #pragma HLS PIPELINE
-        ap_uint<16> inputBinary = inputBinaries[i];
+        InputData inputData;
+        if (!inputBinariesStream.empty()) {
+            inputData = inputBinariesStream.read();
+        }
+        
+        ap_uint<16> inputBinary = inputData.data;
         ap_uint<ABCStar_ID_BITS> ABCStarID = inputBinary >> (16 - ABCStar_ID_BITS);
         ap_uint<POSITION_BITS> seedPosition = inputBinary & ((1 << POSITION_BITS) - 1);
         ap_uint<3> sizeBitmask = (inputBinary >> POSITION_BITS) & 0x7;

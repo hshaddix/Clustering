@@ -1,6 +1,7 @@
 #include <iostream>
 #include <ap_int.h>
 #include <hls_stream.h>
+#include <test.cpp>
 
 #define MAX_HITS 1024
 #define MAX_CLUSTERS 127

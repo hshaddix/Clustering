@@ -134,6 +134,7 @@ void processHits(hls::stream<InputData> &inputBinariesStream, int inputHitCount,
     }
 }
 
+#ifndef __SYNTHESIS__
 // Testbench
 int main() {
     hls::stream<InputData> testDataStream;
@@ -170,3 +171,4 @@ int main() {
 
     return 0;
 }
+#endif

@@ -7,7 +7,7 @@
 
 #define MAX_HITS 1024
 #define MAX_CLUSTERS 127
-#define ABCStar_ID_BITS 11
+#define ABCStar_ID_BITS 5
 #define POSITION_BITS 8
 #define ABCStar_SIZE 128
 

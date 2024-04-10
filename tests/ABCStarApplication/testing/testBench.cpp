@@ -1,7 +1,7 @@
 #include <iostream>
 #include <ap_int.h>
 #include <hls_stream.h>
-#include "test.cpp"
+#include "processHits.h"
 
 #ifndef __SYNTHESIS__
 // Testbench

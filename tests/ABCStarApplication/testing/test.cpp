@@ -2,28 +2,6 @@
 #include <hls_stream.h>
 #include "processHits.h"
 
-
-#define MAX_HITS 1024
-#define MAX_CLUSTERS 127
-#define ABCStar_ID_BITS 11
-#define POSITION_BITS 8
-#define ABCStar_SIZE 128 // Assuming a fixed ABCStar size of 128 positions.
-
-struct Hit {
-    ap_uint<ABCStar_ID_BITS> ABCStarID;
-    ap_uint<POSITION_BITS> position;
-};
-
-struct ClusterInfo {
-    Hit firstHit; // First hit in the cluster
-    int size;     // Number of hits in the cluster
-};
-
-// Define a new struct for input data to encapsulate it in a stream
-struct InputData {
-    ap_uint<16> data;
-};
-
 // Function to process hits and cluster them
 void processHits(hls::stream<InputData> &inputBinariesStream, int inputHitCount, ClusterInfo outputClusters[MAX_CLUSTERS], int& outputClusterCount) {
     #pragma HLS INTERFACE s_axilite port=return

@@ -12,7 +12,7 @@ int main() {
     // Case 1
     {
         hls::stream<InputData> testDataStream;
-        InputData inputDataCase1 = {0b000000110010010};
+        InputData inputDataCase1 = {0b0000000110010010};
         testDataStream.write(inputDataCase1);
         processHits(testDataStream, 1, testOutputClusters, testOutputClusterCount);
         std::cout << "Case 1 Output Cluster Count: " << testOutputClusterCount << std::endl;

@@ -3,7 +3,7 @@
 
 #define MAX_HITS 1024
 #define MAX_CLUSTERS 127
-#define ABCStar_ID_BITS 11
+#define ABCStar_ID_BITS 5
 #define POSITION_BITS 8
 #define ABCStar_SIZE 128 // Assuming a fixed ABCStar size of 128 positions.
 
@@ -43,9 +43,9 @@ void processHits(hls::stream<InputData> &inputBinariesStream, int inputHitCount,
         }
         
         ap_uint<16> inputBinary = inputData.data;
-        ap_uint<ABCStar_ID_BITS> ABCStarID = inputBinary >> (16 - ABCStar_ID_BITS);
-        ap_uint<POSITION_BITS> seedPosition = inputBinary & ((1 << POSITION_BITS) - 1);
-        ap_uint<3> sizeBitmask = (inputBinary >> POSITION_BITS) & 0x7;
+        ap_uint<ABCStar_ID_BITS> ABCStarID = inputBinary.range(15, 11);
+        ap_uint<POSITION_BITS> seedPosition = inputBinary.range(10, 3);
+        ap_uint<3> sizeBitmask = inputBinary.range(2, 0);
 
         // Process hits based on bitmask
         switch(sizeBitmask.to_uint()) {

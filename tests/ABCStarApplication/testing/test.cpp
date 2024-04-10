@@ -1,5 +1,7 @@
 #include <ap_int.h>
 #include <hls_stream.h>
+#include "processHits.h"
+
 
 #define MAX_HITS 1024
 #define MAX_CLUSTERS 127

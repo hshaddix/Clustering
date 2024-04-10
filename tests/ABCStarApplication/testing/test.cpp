@@ -23,9 +23,12 @@ void processHits(hls::stream<InputData> &inputBinariesStream, int inputHitCount,
         }
         
         ap_uint<16> inputBinary = inputData.data;
-        ap_uint<ABCStar_ID_BITS> ABCStarID = inputBinary >> (16 - ABCStar_ID_BITS);
-        ap_uint<POSITION_BITS> seedPosition = inputBinary & ((1 << POSITION_BITS) - 1);
-        ap_uint<3> sizeBitmask = (inputBinary >> POSITION_BITS) & 0x7;
+        // Extracting ABCStarID (first 5 bits)
+        ap_uint<ABCStar_ID_BITS> ABCStarID = inputBinary.range(15, 11);
+        // Extracting position (next 8 bits)
+        ap_uint<POSITION_BITS> seedPosition = inputBinary.range(10, 3);
+        // Extracting sizeBitmask (last 3 bits)
+        ap_uint<3> sizeBitmask = inputBinary.range(2, 0);
 
         // Process hits based on bitmask
         switch(sizeBitmask.to_uint()) {

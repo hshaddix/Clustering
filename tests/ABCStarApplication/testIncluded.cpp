@@ -1,6 +1,7 @@
+#include <iostream>
 #include <ap_int.h>
 #include <hls_stream.h>
-#include namespace std 
+#include <vector>
 
 #define MAX_HITS 1024
 #define MAX_CLUSTERS 127

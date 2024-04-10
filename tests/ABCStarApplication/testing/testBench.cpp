@@ -16,6 +16,9 @@ int main() {
         testDataStream.write(inputDataCase1);
         processHits(testDataStream, 1, testOutputClusters, testOutputClusterCount);
         std::cout << "Case 1 Output Cluster Count: " << testOutputClusterCount << std::endl;
+        for (int i = 0; i < testOutputClusterCount; ++i) {
+            std::cout << "Cluster " << i+1 << ": Position (ABCStarID: " << testOutputClusters[i].firstHit.ABCStarID << ", Position: " << testOutputClusters[i].firstHit.position << "), Size: " << testOutputClusters[i].size << std::endl;
+        }
     }
 
     // Case 2
@@ -27,6 +30,9 @@ int main() {
         testDataStream.write(inputDataCase2_2);
         processHits(testDataStream, 2, testOutputClusters, testOutputClusterCount);
         std::cout << "Case 2 Output Cluster Count: " << testOutputClusterCount << std::endl;
+        for (int i = 0; i < testOutputClusterCount; ++i) {
+            std::cout << "Cluster " << i+1 << ": Position (ABCStarID: " << testOutputClusters[i].firstHit.ABCStarID << ", Position: " << testOutputClusters[i].firstHit.position << "), Size: " << testOutputClusters[i].size << std::endl;
+        }
     }
 
     // Case 3
@@ -38,6 +44,9 @@ int main() {
         testDataStream.write(inputDataCase3_2);
         processHits(testDataStream, 2, testOutputClusters, testOutputClusterCount);
         std::cout << "Case 3 Output Cluster Count: " << testOutputClusterCount << std::endl;
+        for (int i = 0; i < testOutputClusterCount; ++i) {
+            std::cout << "Cluster " << i+1 << ": Position (ABCStarID: " << testOutputClusters[i].firstHit.ABCStarID << ", Position: " << testOutputClusters[i].firstHit.position << "), Size: " << testOutputClusters[i].size << std::endl;
+        }
     }
 
     return 0;

@@ -23,25 +23,23 @@ struct InputData {
 };
 
 // Function to process hits and cluster them
-void processHits(hls::stream<InputData> &inputBinariesStream, int inputHitCount, ClusterInfo outputClusters[MAX_CLUSTERS], int& outputClusterCount) {
+void processHits(hls::stream<InputData> &inputBinariesStream, ClusterInfo outputClusters[MAX_CLUSTERS], int& outputClusterCount) {
     #pragma HLS INTERFACE s_axilite port=return
-    #pragma HLS INTERFACE s_axilite port=inputHitCount
-    #pragma HLS INTERFACE s_axilite port=outputClusterCount
     #pragma HLS INTERFACE axis port=inputBinariesStream
-    #pragma HLS INTERFACE s_axilite port=outputClusters 
+    #pragma HLS INTERFACE s_axilite port=outputClusters
 
     Hit hits[MAX_HITS];
     int hitCount = 0;
     outputClusterCount = 0;
     bool errorFlag = false;
 
-    DecodeLoop: for (int i = 0; i < inputHitCount; ++i) {
+    InputData inputData;
+    while (!inputBinariesStream.empty()) {
         #pragma HLS PIPELINE
-        InputData inputData;
-        if (!inputBinariesStream.empty()) {
-            inputData = inputBinariesStream.read();
-        }
+        inputData = inputBinariesStream.read();
         
+        if (inputData.last) break;  // Break the loop if the last signal is high
+
         ap_uint<16> inputBinary = inputData.data;
         ap_uint<ABCStar_ID_BITS> ABCStarID = inputBinary.range(15, 11);
         ap_uint<POSITION_BITS> seedPosition = inputBinary.range(10, 3);

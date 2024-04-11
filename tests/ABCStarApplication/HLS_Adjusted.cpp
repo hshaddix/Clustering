@@ -1,5 +1,6 @@
 #include <ap_int.h>
 #include <hls_stream.h>
+#include <ap_axi_sdata.h>
 
 #define MAX_HITS 1024
 #define MAX_CLUSTERS 127
@@ -18,9 +19,7 @@ struct ClusterInfo {
 };
 
 // Define a new struct for input data to encapsulate it in a stream
-struct InputData {
-    ap_uint<16> data;
-};
+typedef ap_axiu<16, 0, 0, 0> InputData;  // 16-bit data
 
 // Function to process hits and cluster them
 void processHits(hls::stream<InputData> &inputBinariesStream, ClusterInfo outputClusters[MAX_CLUSTERS], int& outputClusterCount) {

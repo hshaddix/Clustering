@@ -19,13 +19,14 @@ struct ClusterInfo {
 };
 
 // Define a new struct for input data to encapsulate it in a stream
-typedef ap_axiu<16, 0, 0, 0> InputData;  // 16-bit data
+typedef ap_axiu<16, 0, 0, 1> InputData;  // 16-bit data
 
+// Function to process hits and cluster them
 // Function to process hits and cluster them
 void processHits(hls::stream<InputData> &inputBinariesStream, ClusterInfo outputClusters[MAX_CLUSTERS], int& outputClusterCount) {
     #pragma HLS INTERFACE s_axilite port=return
     #pragma HLS INTERFACE axis port=inputBinariesStream
-    #pragma HLS INTERFACE s_axilite port=outputClusters
+    #pragma HLS INTERFACE s_axilite port=outputClusters 
 
     Hit hits[MAX_HITS];
     int hitCount = 0;
@@ -33,49 +34,51 @@ void processHits(hls::stream<InputData> &inputBinariesStream, ClusterInfo output
     bool errorFlag = false;
 
     InputData inputData;
-    while (!inputBinariesStream.empty()) {
+    bool last = false;
+    do {
         #pragma HLS PIPELINE
-        inputData = inputBinariesStream.read();
-        
-        if (inputData.last) break;  // Break the loop if the last signal is high
+        if (!inputBinariesStream.empty()) {
+            inputData = inputBinariesStream.read();
+            last = inputData.last;
 
-        ap_uint<16> inputBinary = inputData.data;
-        ap_uint<ABCStar_ID_BITS> ABCStarID = inputBinary.range(15, 11);
-        ap_uint<POSITION_BITS> seedPosition = inputBinary.range(10, 3);
-        ap_uint<3> sizeBitmask = inputBinary.range(2, 0);
+            ap_uint<16> inputBinary = inputData.data;
+            ap_uint<ABCStar_ID_BITS> ABCStarID = inputBinary.range(15, 11);
+            ap_uint<POSITION_BITS> seedPosition = inputBinary.range(10, 3);
+            ap_uint<3> sizeBitmask = inputBinary.range(2, 0);
 
-        // Process hits based on bitmask
-        switch(sizeBitmask.to_uint()) {
-            case 1: // 001
-                hits[hitCount++] = {ABCStarID, seedPosition + 3};
-                break;
-            case 2: // 010
-                hits[hitCount++] = {ABCStarID, seedPosition + 2};
-                break;
-            case 3: // 011
-                hits[hitCount++] = {ABCStarID, seedPosition + 2};
-                hits[hitCount++] = {ABCStarID, seedPosition + 3};
-                break;
-            case 4: // 100
-                hits[hitCount++] = {ABCStarID, seedPosition + 1};
-                break;
-            case 5: // 101
-                hits[hitCount++] = {ABCStarID, seedPosition + 1};
-                hits[hitCount++] = {ABCStarID, seedPosition + 3};
-                break;
-            case 6: // 110
-                hits[hitCount++] = {ABCStarID, seedPosition + 1};
-                hits[hitCount++] = {ABCStarID, seedPosition + 2};
-                break;
-            case 7: // 111
-                hits[hitCount++] = {ABCStarID, seedPosition + 1};
-                hits[hitCount++] = {ABCStarID, seedPosition + 2};
-                hits[hitCount++] = {ABCStarID, seedPosition + 3};
-                break;
-            default: // 000 and any other unexpected case
-                break;
+            // Process hits based on bitmask
+            switch(sizeBitmask.to_uint()) {
+                case 1: // 001
+                    hits[hitCount++] = {ABCStarID, seedPosition + 3};
+                    break;
+                case 2: // 010
+                    hits[hitCount++] = {ABCStarID, seedPosition + 2};
+                    break;
+                case 3: // 011
+                    hits[hitCount++] = {ABCStarID, seedPosition + 2};
+                    hits[hitCount++] = {ABCStarID, seedPosition + 3};
+                    break;
+                case 4: // 100
+                    hits[hitCount++] = {ABCStarID, seedPosition + 1};
+                    break;
+                case 5: // 101
+                    hits[hitCount++] = {ABCStarID, seedPosition + 1};
+                    hits[hitCount++] = {ABCStarID, seedPosition + 3};
+                    break;
+                case 6: // 110
+                    hits[hitCount++] = {ABCStarID, seedPosition + 1};
+                    hits[hitCount++] = {ABCStarID, seedPosition + 2};
+                    break;
+                case 7: // 111
+                    hits[hitCount++] = {ABCStarID, seedPosition + 1};
+                    hits[hitCount++] = {ABCStarID, seedPosition + 2};
+                    hits[hitCount++] = {ABCStarID, seedPosition + 3};
+                    break;
+                default: // 000 and any other unexpected case
+                    break;
+            }
         }
-    }
+    } while (!last);  // Continue until the last data packet
 
     // Post-processing: Determine cluster starts based on adjacency, including ABCStar boundaries
     int clusterIndices[MAX_HITS] = {0}; // Tracks the start index of each cluster

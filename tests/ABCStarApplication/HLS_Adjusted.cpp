@@ -37,45 +37,44 @@ void processHits(hls::stream<InputData> &inputBinariesStream, ClusterInfo output
     bool last = false;
     do {
         #pragma HLS PIPELINE
-        if (!inputBinariesStream.empty()) {
-            inputData = inputBinariesStream.read();
-            last = inputData.last;
+        inputData = inputBinariesStream.read();
+        last = inputData.last;
 
-            ap_uint<16> inputBinary = inputData.data;
-            ap_uint<ABCStar_ID_BITS> ABCStarID = inputBinary.range(15, 11);
-            ap_uint<POSITION_BITS> seedPosition = inputBinary.range(10, 3);
-            ap_uint<3> sizeBitmask = inputBinary.range(2, 0);
+        ap_uint<16> inputBinary = inputData.data;
+        ap_uint<ABCStar_ID_BITS> ABCStarID = inputBinary.range(15, 11);
+        ap_uint<POSITION_BITS> seedPosition = inputBinary.range(10, 3);
+        ap_uint<3> sizeBitmask = inputBinary.range(2, 0);
 
-            // Process hits based on bitmask
-            switch(sizeBitmask.to_uint()) {
-                case 1: // 001
-                    hits[hitCount++] = {ABCStarID, seedPosition + 3};
-                    break;
-                case 2: // 010
-                    hits[hitCount++] = {ABCStarID, seedPosition + 2};
-                    break;
-                case 3: // 011
-                    hits[hitCount++] = {ABCStarID, seedPosition + 2};
-                    hits[hitCount++] = {ABCStarID, seedPosition + 3};
-                    break;
-                case 4: // 100
-                    hits[hitCount++] = {ABCStarID, seedPosition + 1};
-                    break;
-                case 5: // 101
-                    hits[hitCount++] = {ABCStarID, seedPosition + 1};
-                    hits[hitCount++] = {ABCStarID, seedPosition + 3};
-                    break;
-                case 6: // 110
-                    hits[hitCount++] = {ABCStarID, seedPosition + 1};
-                    hits[hitCount++] = {ABCStarID, seedPosition + 2};
-                    break;
-                case 7: // 111
-                    hits[hitCount++] = {ABCStarID, seedPosition + 1};
-                    hits[hitCount++] = {ABCStarID, seedPosition + 2};
-                    hits[hitCount++] = {ABCStarID, seedPosition + 3};
-                    break;
-                default: // 000 and any other unexpected case
-                    break;
+        // Process hits based on bitmask
+        switch(sizeBitmask.to_uint()) {
+            case 1: // 001
+                hits[hitCount++] = {ABCStarID, seedPosition + 3};
+                break;
+            case 2: // 010
+                hits[hitCount++] = {ABCStarID, seedPosition + 2};
+                break;
+            case 3: // 011
+                hits[hitCount++] = {ABCStarID, seedPosition + 2};
+                hits[hitCount++] = {ABCStarID, seedPosition + 3};
+                break;
+            case 4: // 100
+                hits[hitCount++] = {ABCStarID, seedPosition + 1};
+                break;
+            case 5: // 101
+                hits[hitCount++] = {ABCStarID, seedPosition + 1};
+                hits[hitCount++] = {ABCStarID, seedPosition + 3};
+                break;
+            case 6: // 110
+                hits[hitCount++] = {ABCStarID, seedPosition + 1};
+                hits[hitCount++] = {ABCStarID, seedPosition + 2};
+                break;
+            case 7: // 111
+                hits[hitCount++] = {ABCStarID, seedPosition + 1};
+                hits[hitCount++] = {ABCStarID, seedPosition + 2};
+                hits[hitCount++] = {ABCStarID, seedPosition + 3};
+                break;
+            default: // 000 and any other unexpected case
+                break;
             }
         }
     } while (!last);  // Continue until the last data packet

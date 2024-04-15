@@ -13,25 +13,25 @@ struct Hit {
     ap_uint<POSITION_BITS> position;
 };
 
-struct ClusterInfo {
-    Hit firstHit; // First hit in the cluster
-    int size;     // Number of hits in the cluster
+struct OutputClusterInfo {
+    ap_uint<POSITION_BITS> position;  // Position of the seed hit
+    ap_uint<4> size;                  // Size of the cluster, up to 15
 };
 
 // Define a new struct for input data to encapsulate it in a stream
 typedef ap_axiu<16, 0, 0, 1> InputData;  // 16-bit data
 
+// Define a new struct for output data to encapsulate it in a stream
+typedef ap_axiu<12, 0, 0, 1> OutputData; // 12-bit data (8 bits for position + 4 bits for size)
+
 // Function to process hits and cluster them
-// Function to process hits and cluster them
-void processHits(hls::stream<InputData> &inputBinariesStream, ClusterInfo outputClusters[MAX_CLUSTERS], int& outputClusterCount) {
+void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<OutputData> &outputClustersStream) {
     #pragma HLS INTERFACE s_axilite port=return
     #pragma HLS INTERFACE axis port=inputBinariesStream
-    #pragma HLS INTERFACE s_axilite port=outputClusters 
+    #pragma HLS INTERFACE axis port=outputClustersStream
 
     Hit hits[MAX_HITS];
     int hitCount = 0;
-    outputClusterCount = 0;
-    bool errorFlag = false;
 
     InputData inputData;
     bool last = false;
@@ -75,58 +75,31 @@ void processHits(hls::stream<InputData> &inputBinariesStream, ClusterInfo output
                 break;
             default: // 000 and any other unexpected case
                 break;
-            }
         }
-    } while (!last);  // Continue until the last data packet
+    } while (!last);
 
     // Post-processing: Determine cluster starts based on adjacency, including ABCStar boundaries
-    int clusterIndices[MAX_HITS] = {0}; // Tracks the start index of each cluster
-    int clusterSizes[MAX_HITS] = {0}; // Tracks the size of each cluster
-    int numClusters = 0; // Number of clusters identified
-    clusterSizes[0] = 1; // First cluster has at least one hit
-    int tempClusterSize = 1; // Temporary variable to accumulate the cluster size
-    
-    for (int i = 1; i < hitCount; ++i) {
+    int clusterStartIndex = 0;
+    for (int i = 1; i < hitCount; i++) {
         #pragma HLS PIPELINE
-        bool isAdjacent = false;
-        // Check adjacency within the same ABCStar
-        if (hits[i].ABCStarID == hits[i-1].ABCStarID && hits[i].position == hits[i-1].position + 1) {
-            isAdjacent = true;
-        }
-        // Check adjacency across ABCStar boundaries
-        if (hits[i].ABCStarID == hits[i-1].ABCStarID + 1 && hits[i-1].position == ABCStar_SIZE - 1 && hits[i].position == 0) {
-            isAdjacent = true;
-        }
-        
-        if (!isAdjacent) {
-            // Not adjacent, finalize the current cluster's size
-            clusterSizes[numClusters] = tempClusterSize;
-            numClusters++; // Start a new cluster
-            clusterIndices[numClusters] = i; // Mark the new cluster's starting index
-            tempClusterSize = 1; // Reset for the new cluster
-        } else {
-            // Increment the size for the ongoing cluster
-            tempClusterSize++;
-        }
-    }
-    // Update the size of the last cluster after loop completion
-    clusterSizes[numClusters] = tempClusterSize;
-    
-    // Safely update outputClusters based on identified clusters
-    for (int i = 0; i <= numClusters; ++i) {
-        #pragma HLS PIPELINE
-        if (i < MAX_CLUSTERS) {
-            outputClusters[i].firstHit = hits[clusterIndices[i]]; // Assign the first hit of each cluster
-            outputClusters[i].size = clusterSizes[i]; // Assign the calculated size of each cluster
-        } else {
-            errorFlag = true; // Set the error flag if exceeding MAX_CLUSTERS
-            break; // Optionally break out of the loop to stop processing further clusters
-        }
-    }
-    outputClusterCount = numClusters + 1; // Update the total number of clusters identified
+        // Check adjacency within the same ABCStar or across boundaries
+        bool isAdjacent = (hits[i].ABCStarID == hits[i-1].ABCStarID && hits[i].position == hits[i-1].position + 1) ||
+                          (hits[i].ABCStarID == hits[i-1].ABCStarID + 1 && hits[i-1].position == ABCStar_SIZE - 1 && hits[i].position == 0);
 
-    // Check if an error occurred due to exceeding MAX_CLUSTERS
-    if (errorFlag) {
-        outputClusterCount = MAX_CLUSTERS;
+        if (!isAdjacent) {
+            // Output the cluster formed before this hit
+            OutputData outputData;
+            outputData.data = (hits[clusterStartIndex].position << 4) | (i - clusterStartIndex); // pack position and size
+            outputData.last = 0; // Not the last output unless set below
+            outputClustersStream.write(outputData);
+            clusterStartIndex = i;
+        }
     }
+
+    // Output the final cluster
+    OutputData outputData;
+    outputData.data = (hits[clusterStartIndex].position << 4) | (hitCount - clusterStartIndex); // pack position and size
+    outputData.last = 1; // Mark this as the last cluster output
+    outputClustersStream.write(outputData);
 }
+

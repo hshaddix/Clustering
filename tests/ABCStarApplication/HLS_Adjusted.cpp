@@ -30,6 +30,7 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
     #pragma HLS INTERFACE axis port=inputBinariesStream
     #pragma HLS INTERFACE axis port=outputClustersStream
 
+    #pragma HLS ARRAY_PARTITION variable=hits complete
     Hit hits[MAX_HITS];
     int hitCount = 0;
 

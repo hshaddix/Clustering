@@ -41,11 +41,37 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
             second_hit.position = inputBinary.range(10, 3);
             ap_uint<3> sizeBitmask = inputBinary.range(2, 0);
 
-            // Update the second_hit based on the size bitmask
-            if (sizeBitmask != 0) {
-                if (sizeBitmask & 1) second_hit.position += 1;
-                if (sizeBitmask & 2) second_hit.position += 2;
-                if (sizeBitmask & 4) second_hit.position += 3;
+            // Adjust second_hit position based on bitmask
+            switch(sizeBitmask.to_uint()) {
+                case 1: // 001
+                    second_hit.position += 3;
+                    break;
+                case 2: // 010
+                    second_hit.position += 2;
+                    break;
+                case 3: // 011
+                    second_hit.position += 2; 
+                    second_hit.position += 3;
+                    break;
+                case 4: // 100
+                    second_hit.position += 1;
+                    break;
+                case 5: // 101
+                    second_hit.position += 1; 
+                    second_hit.position += 3;
+                    break;
+                case 6: // 110
+                    second_hit.position += 1;
+                    second_hit.position += 2;
+                    break;
+                case 7: // 111
+                    second_hit.position += 1; 
+                    second_hit.position += 2;
+                    second_hit.position += 3;
+                    break;
+                default:
+                    // Do nothing for the unexpected bitmask
+                    break;
             }
 
             // Check if first and second hit are adjacent
@@ -58,9 +84,9 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
                 outputData.data = (first_hit.position << 4) | 1; // Example packing, assuming size is 1 for simplicity
                 outputData.last = 0;
                 outputClustersStream.write(outputData);
+                first_hit = second_hit; // Move second hit to first for next iteration
             }
 
-            first_hit = second_hit; // Move second hit to first for next iteration
             init = false;
         } while (!last);
 

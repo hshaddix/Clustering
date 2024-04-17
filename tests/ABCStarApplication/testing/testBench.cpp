@@ -6,48 +6,66 @@
 #ifndef __SYNTHESIS__
 // Testbench
 int main() {
-    ClusterInfo testOutputClusters[MAX_CLUSTERS];
-    int testOutputClusterCount;
+    // Declare the output stream to hold cluster information
+    hls::stream<OutputData> outputClustersStream;
 
-    // Case 1
+    // Case 1: ID = 0, Position = 50, Bitmask = 010
     {
         hls::stream<InputData> testDataStream;
-        InputData inputDataCase1 = {0b0000000110010010};
+        unsigned short data1 = (0 << 11) | (50 << 3) | 0b010;
+        InputData inputDataCase1 = {data1, false}; // Not the last data
         testDataStream.write(inputDataCase1);
-        processHits(testDataStream, 1, testOutputClusters, testOutputClusterCount);
-        std::cout << "Case 1 Output Cluster Count: " << testOutputClusterCount << std::endl;
-        for (int i = 0; i < testOutputClusterCount; ++i) {
-            std::cout << "Cluster " << i+1 << ": Position (ABCStarID: " << testOutputClusters[i].firstHit.ABCStarID << ", Position: " << testOutputClusters[i].firstHit.position << "), Size: " << testOutputClusters[i].size << std::endl;
+
+        processHits(testDataStream, outputClustersStream);
+
+        std::cout << "Case 1 Results:" << std::endl;
+        while (!outputClustersStream.empty()) {
+            OutputData output = outputClustersStream.read();
+            std::cout << "Cluster: Position = " << (output.data >> 4)
+                      << ", Size = " << (output.data & 0xF)
+                      << ", Last = " << output.last << std::endl;
         }
     }
 
-    // Case 2
+    // Case 2: Two clusters on the same ABCStar with positions 50 and 53
     {
         hls::stream<InputData> testDataStream;
-        InputData inputDataCase2_1 = {0b000000110010101};
-        InputData inputDataCase2_2 = {0b000000110110100};
-        testDataStream.write(inputDataCase2_1);
-        testDataStream.write(inputDataCase2_2);
-        processHits(testDataStream, 2, testOutputClusters, testOutputClusterCount);
-        std::cout << "Case 2 Output Cluster Count: " << testOutputClusterCount << std::endl;
-        for (int i = 0; i < testOutputClusterCount; ++i) {
-            std::cout << "Cluster " << i+1 << ": Position (ABCStarID: " << testOutputClusters[i].firstHit.ABCStarID << ", Position: " << testOutputClusters[i].firstHit.position << "), Size: " << testOutputClusters[i].size << std::endl;
+        InputData inputData1 = {(0 << 11) | (50 << 3) | 0b101, false}; // Not the last data
+        InputData inputData2 = {(0 << 11) | (53 << 3) | 0b110, true};  // Last data
+        testDataStream.write(inputData1);
+        testDataStream.write(inputData2);
+
+        processHits(testDataStream, outputClustersStream);
+
+        std::cout << "Case 2 Results:" << std::endl;
+        while (!outputClustersStream.empty()) {
+            OutputData output = outputClustersStream.read();
+            std::cout << "Cluster: Position = " << (output.data >> 4)
+                      << ", Size = " << (output.data & 0xF)
+                      << ", Last = " << output.last << std::endl;
         }
     }
 
-    // Case 3
+      // Case 3: Two clusters on different ABCStar with positions 126 and 0
     {
         hls::stream<InputData> testDataStream;
-        InputData inputDataCase3_1 = {0b0000001111010111};
-        InputData inputDataCase3_2 = {0b0000100000000110};
-        testDataStream.write(inputDataCase3_1);
-        testDataStream.write(inputDataCase3_2);
-        processHits(testDataStream, 2, testOutputClusters, testOutputClusterCount);
-        std::cout << "Case 3 Output Cluster Count: " << testOutputClusterCount << std::endl;
-        for (int i = 0; i < testOutputClusterCount; ++i) {
-            std::cout << "Cluster " << i+1 << ": Position (ABCStarID: " << testOutputClusters[i].firstHit.ABCStarID << ", Position: " << testOutputClusters[i].firstHit.position << "), Size: " << testOutputClusters[i].size << std::endl;
+        InputData inputData1 = {(0 << 11) | (126 << 3) | 0b100, false}; // Not the last data
+        InputData inputData2 = {(1 << 11) | (0 << 3) | 0b100, true};  // Last data
+        testDataStream.write(inputData1);
+        testDataStream.write(inputData2);
+
+        processHits(testDataStream, outputClustersStream);
+
+        std::cout << "Case 3 Results:" << std::endl;
+        while (!outputClustersStream.empty()) {
+            OutputData output = outputClustersStream.read();
+            std::cout << "Cluster: Position = " << (output.data >> 4)
+                      << ", Size = " << (output.data & 0xF)
+                      << ", Last = " << output.last << std::endl;
         }
     }
+
+    // Additional cases can be defined in a similar manner
 
     return 0;
 }

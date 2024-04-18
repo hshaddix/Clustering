@@ -2,7 +2,7 @@
 #include <hls_stream.h>
 #include <ap_axi_sdata.h>
 
-#define MAX_HITS 1024
+// #define MAX_HITS 1024
 #define ABCStar_ID_BITS 5
 #define POSITION_BITS 8
 #define ABCStar_SIZE 128 // Assuming a fixed ABCStar size of 128 positions.

@@ -1,5 +1,3 @@
-#include <ap_int.h>
-#include <hls_stream.h>
 #include "processHits.h"
 
 // Function to process hits and cluster them
@@ -17,17 +15,17 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
             #pragma HLS PIPELINE
             InputData inputData = inputBinariesStream.read();
             last = inputData.last;
-            ap_uint<16> inputBinary = inputData.data;
 
             if (!init) {
                 first_hit = second_hit;  // Prepare the first_hit for comparison
             }
 
-            second_hit.ABCStarID = inputBinary.range(15, 11);
-            second_hit.position = inputBinary.range(10, 3);
-            ap_uint<3> sizeBitmask = inputBinary.range(2, 0);
+            // Decode the input data
+            second_hit.ABCStarID = inputData.data.range(15, 11);
+            second_hit.position = inputData.data.range(10, 3);
+            ap_uint<3> sizeBitmask = inputData.data.range(2, 0);
 
-            // Decode bitmask to adjust the position of second_hit accordingly
+            // Decode bitmask and adjust the position of second_hit accordingly
             switch(sizeBitmask.to_uint()) {
                 case 1: // 001
                     second_hit.position += 3;
@@ -36,22 +34,22 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
                     second_hit.position += 2;
                     break;
                 case 3: // 011
-                    second_hit.position += 2; // Adding once as next line will add one more
+                    second_hit.position += 2;
                     second_hit.position += 3;
                     break;
                 case 4: // 100
                     second_hit.position += 1;
                     break;
                 case 5: // 101
-                    second_hit.position += 1; // Adding once as next line will add two more
+                    second_hit.position += 1;
                     second_hit.position += 3;
                     break;
                 case 6: // 110
-                    second_hit.position += 1; // Adding once as next line will add one more
+                    second_hit.position += 1;
                     second_hit.position += 2;
                     break;
                 case 7: // 111
-                    second_hit.position += 1; // Adding once as next line will add one more each time
+                    second_hit.position += 1;
                     second_hit.position += 2;
                     second_hit.position += 3;
                     break;

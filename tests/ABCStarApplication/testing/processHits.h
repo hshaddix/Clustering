@@ -17,7 +17,7 @@ struct Hit {
 struct OutputClusterInfo {
     ap_uint<ABCStar_ID_BITS> ABCStarID; // ABCStarID of the cluster
     ap_uint<POSITION_BITS> position;  // Position of the seed hit
-    ap_uint<SIZE_BITS> size;                  // Size of the cluster, up to 15
+    ap_uint<SIZE_BITS> size;  // Size of the cluster, up to 7
 };
 
 typedef ap_axiu<16, 0, 0, 1> InputData;  // 16-bit data

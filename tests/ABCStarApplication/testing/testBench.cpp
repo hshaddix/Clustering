@@ -9,10 +9,22 @@ int main() {
     // Declare the output stream to hold cluster information
     hls::stream<OutputData> outputClustersStream;
 
+    // Define inputs for each case
+    int id1 = 0, position1 = 50;
+    unsigned char bitmask1 = 0b010;
+
+    int id2 = 0, position2a = 50, position2b = 53;
+    unsigned char bitmask2a = 0b101, bitmask2b = 0b110;
+
+    int id3a = 0, position3a = 126;
+    int id3b = 1, position3b = 0;
+    unsigned char bitmask3 = 0b100;
+
     // Case 1: ID = 0, Position = 50, Bitmask = 010
     {
         hls::stream<InputData> testDataStream;
-        unsigned short data1 = (0 << 11) | (50 << 3) | 0b010;
+        std::cout << "Case 1 Input: ABCStarID = " << id1 << ", Position = " << position1 << ", Bitmask = " << std::bitset<3>(bitmask1) << std::endl;
+        unsigned short data1 = (id1 << 11) | (position1 << 3) | bitmask1;
         InputData inputDataCase1 = {data1, false}; // Not the last data
         testDataStream.write(inputDataCase1);
 
@@ -21,8 +33,9 @@ int main() {
         std::cout << "Case 1 Results:" << std::endl;
         while (!outputClustersStream.empty()) {
             OutputData output = outputClustersStream.read();
-            std::cout << "Cluster: Position = " << (output.data >> 4)
-                      << ", Size = " << (output.data & 0xF)
+            std::cout << "Cluster: ABCStarID = " << (output.data >> (POSITION_BITS + SIZE_BITS))
+                      << ", Position = " << ((output.data >> SIZE_BITS) & ((1 << POSITION_BITS) - 1))
+                      << ", Size = " << (output.data & ((1 << SIZE_BITS) - 1))
                       << ", Last = " << output.last << std::endl;
         }
     }
@@ -30,8 +43,11 @@ int main() {
     // Case 2: Two clusters on the same ABCStar with positions 50 and 53
     {
         hls::stream<InputData> testDataStream;
-        InputData inputData1 = {(0 << 11) | (50 << 3) | 0b101, false}; // Not the last data
-        InputData inputData2 = {(0 << 11) | (53 << 3) | 0b110, true};  // Last data
+        std::cout << "Case 2 Input: \n";
+        std::cout << "    ABCStarID = " << id2 << ", Position = " << position2a << ", Bitmask = " << std::bitset<3>(bitmask2a) << std::endl;
+        std::cout << "    ABCStarID = " << id2 << ", Position = " << position2b << ", Bitmask = " << std::bitset<3>(bitmask2b) << std::endl;
+        InputData inputData1 = {(id2 << 11) | (position2a << 3) | bitmask2a, false}; // Not the last data
+        InputData inputData2 = {(id2 << 11) | (position2b << 3) | bitmask2b, true};  // Last data
         testDataStream.write(inputData1);
         testDataStream.write(inputData2);
 
@@ -40,17 +56,21 @@ int main() {
         std::cout << "Case 2 Results:" << std::endl;
         while (!outputClustersStream.empty()) {
             OutputData output = outputClustersStream.read();
-            std::cout << "Cluster: Position = " << (output.data >> 4)
-                      << ", Size = " << (output.data & 0xF)
+            std::cout << "Cluster: ABCStarID = " << (output.data >> (POSITION_BITS + SIZE_BITS))
+                      << ", Position = " << ((output.data >> SIZE_BITS) & ((1 << POSITION_BITS) - 1))
+                      << ", Size = " << (output.data & ((1 << SIZE_BITS) - 1))
                       << ", Last = " << output.last << std::endl;
         }
     }
 
-      // Case 3: Two clusters on different ABCStar with positions 126 and 0
+    // Case 3: Two clusters on different ABCStar with positions 126 and 0
     {
         hls::stream<InputData> testDataStream;
-        InputData inputData1 = {(0 << 11) | (126 << 3) | 0b100, false}; // Not the last data
-        InputData inputData2 = {(1 << 11) | (0 << 3) | 0b100, true};  // Last data
+        std::cout << "Case 3 Input: \n";
+        std::cout << "    ABCStarID = " << id3a << ", Position = " << position3a << ", Bitmask = " << std::bitset<3>(bitmask3) << std::endl;
+        std::cout << "    ABCStarID = " << id3b << ", Position = " << position3b << ", Bitmask = " << std::bitset<3>(bitmask3) << std::endl;
+        InputData inputData1 = {(id3a << 11) | (position3a << 3) | bitmask3, false}; // Not the last data
+        InputData inputData2 = {(id3b << 11) | (position3b << 3) | bitmask3, true};  // Last data
         testDataStream.write(inputData1);
         testDataStream.write(inputData2);
 
@@ -59,13 +79,12 @@ int main() {
         std::cout << "Case 3 Results:" << std::endl;
         while (!outputClustersStream.empty()) {
             OutputData output = outputClustersStream.read();
-            std::cout << "Cluster: Position = " << (output.data >> 4)
-                      << ", Size = " << (output.data & 0xF)
+            std::cout << "Cluster: ABCStarID = " << (output.data >> (POSITION_BITS + SIZE_BITS))
+                      << ", Position = " << ((output.data >> SIZE_BITS) & ((1 << POSITION_BITS) - 1))
+                      << ", Size = " << (output.data & ((1 << SIZE_BITS) - 1))
                       << ", Last = " << output.last << std::endl;
         }
     }
-
-    // Additional cases can be defined in a similar manner
 
     return 0;
 }

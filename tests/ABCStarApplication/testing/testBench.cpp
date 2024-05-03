@@ -2,6 +2,7 @@
 #include <ap_int.h>
 #include <hls_stream.h>
 #include "processHits.h"
+#include <bitset>
 
 #ifndef __SYNTHESIS__
 // Testbench

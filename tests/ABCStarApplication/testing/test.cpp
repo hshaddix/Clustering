@@ -40,9 +40,9 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
                 break;
             case 3: // 011
                 second_hit.position += 2;
-                std::cout << "First adjust by +2: Position = " << second_hit.position << std::endl;
+                std::cout << "Adjusted by +2: Position = " << second_hit.position << std::endl;
                 second_hit.position += 1;
-                std::cout << "Second adjust by +1: Position = " << second_hit.position << std::endl;
+                std::cout << "Adjusted by +3: Position = " << second_hit.position << std::endl;
                 break;
             case 4: // 100
                 second_hit.position += 1;
@@ -50,23 +50,23 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
                 break;
             case 5: // 101
                 second_hit.position += 1;
-                std::cout << "First adjust by +1: Position = " << second_hit.position << std::endl;
-                second_hit.position += 2;
-                std::cout << "Second adjust by +2: Position = " << second_hit.position << std::endl;
+                std::cout << "Adjusted by +1: Position = " << second_hit.position << std::endl;
+                second_hit.position += 3;
+                std::cout << "Adjusted by +3: Position = " << second_hit.position << std::endl;
                 break;
             case 6: // 110
                 second_hit.position += 1;
-                std::cout << "First adjust by +1: Position = " << second_hit.position << std::endl;
-                second_hit.position += 1;
-                std::cout << "Second adjust by +1: Position = " << second_hit.position << std::endl;
+                std::cout << "Adjusted by +1: Position = " << second_hit.position << std::endl;
+                second_hit.position += 2;
+                std::cout << "Adjusted by +2: Position = " << second_hit.position << std::endl;
                 break;
             case 7: // 111
                 second_hit.position += 1;
-                std::cout << "First adjust by +1: Position = " << second_hit.position << std::endl;
-                second_hit.position += 1;
-                std::cout << "Second adjust by +1: Position = " << second_hit.position << std::endl;
-                second_hit.position += 1;
-                std::cout << "Third adjust by +1: Position = " << second_hit.position << std::endl;
+                std::cout << "Adjusted by +1: Position = " << second_hit.position << std::endl;
+                second_hit.position += 2;
+                std::cout << "Adjusted by +2: Position = " << second_hit.position << std::endl;
+                second_hit.position += 3;
+                std::cout << "Adjusted by +3: Position = " << second_hit.position << std::endl;
                 break;
             default:
                 // No action on default

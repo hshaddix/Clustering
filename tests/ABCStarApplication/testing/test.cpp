@@ -1,12 +1,10 @@
 #include "processHits.h"
 
-
 // Checks if two hits are adjacent considering the size of the cluster
 bool areAdjacent(const Hit &first_hit, const Hit &second_hit, int size) {
     return (first_hit.ABCStarID == second_hit.ABCStarID && (first_hit.position + size == second_hit.position)) ||
            (first_hit.ABCStarID + 1 == second_hit.ABCStarID && first_hit.position == ABCStar_SIZE - 1 && second_hit.position == 0);
 }
-
 
 // Outputs a cluster to the stream
 void outputCluster(const Hit &hit, int size, hls::stream<OutputData> &stream, bool isLast = false) {
@@ -41,32 +39,33 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
 
         std::cout << "Read Data: ABCStarID = " << second_hit.ABCStarID << ", Base Position = " << basePosition << ", Bitmask = " << sizeBitmask << std::endl;
 
-        // Handle each bitmask case
+        clusterSize = 0;
         switch(sizeBitmask.to_uint()) {
             case 1: // 001
-                second_hit.position = basePosition + 3;
+                second_hit.position = basePosition + 1;
+                clusterSize = 1;
                 break;
             case 2: // 010
                 second_hit.position = basePosition + 2;
+                clusterSize = 1;
                 break;
             case 3: // 011
                 second_hit.position = basePosition + 2;
                 if (!init && !areAdjacent(first_hit, second_hit, clusterSize)) {
                     outputCluster(first_hit, clusterSize, outputClustersStream);
                 }
-                first_hit = second_hit; // Update to new position
                 clusterSize = 1; // Reset for next hit
                 second_hit.position = basePosition + 3;
                 break;
             case 4: // 100
-                second_hit.position = basePosition + 1;
+                second_hit.position = basePosition + 3;
+                clusterSize = 1;
                 break;
             case 5: // 101
                 second_hit.position = basePosition + 1;
                 if (!init && !areAdjacent(first_hit, second_hit, clusterSize)) {
                     outputCluster(first_hit, clusterSize, outputClustersStream);
                 }
-                first_hit = second_hit; // Update to new position
                 clusterSize = 1; // Reset for next hit
                 second_hit.position = basePosition + 3;
                 break;
@@ -75,7 +74,6 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
                 if (!init && !areAdjacent(first_hit, second_hit, clusterSize)) {
                     outputCluster(first_hit, clusterSize, outputClustersStream);
                 }
-                first_hit = second_hit; // Update to new position
                 clusterSize = 1; // Reset for next hit
                 second_hit.position = basePosition + 2;
                 break;
@@ -84,13 +82,11 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
                 if (!init && !areAdjacent(first_hit, second_hit, clusterSize)) {
                     outputCluster(first_hit, clusterSize, outputClustersStream);
                 }
-                first_hit = second_hit; // Update to new position
                 clusterSize = 1; // Reset for next hit
                 second_hit.position = basePosition + 2;
                 if (!init && !areAdjacent(first_hit, second_hit, clusterSize)) {
                     outputCluster(first_hit, clusterSize, outputClustersStream);
                 }
-                first_hit = second_hit; // Update to new position
                 clusterSize = 1; // Reset for next hit
                 second_hit.position = basePosition + 3;
                 break;
@@ -99,10 +95,9 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
                 break;
         }
 
-        // Check adjacency
         if (!init && !areAdjacent(first_hit, second_hit, clusterSize)) {
             outputCluster(first_hit, clusterSize, outputClustersStream);
-            clusterSize = 1; // Reset cluster size
+            clusterSize = 1; // Reset cluster size for new hit
         } else {
             clusterSize++;
         }

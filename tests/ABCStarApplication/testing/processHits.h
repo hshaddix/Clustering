@@ -9,7 +9,7 @@
 #define ABCStar_ID_BITS 5
 #define POSITION_BITS 8
 #define SIZE_BITS 3
-#define ABCStar_SIZE 128
+#define ABCStar_SIZE 256
 
 struct Hit {
     ap_uint<ABCStar_ID_BITS> ABCStarID;

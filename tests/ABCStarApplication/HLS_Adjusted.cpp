@@ -1,27 +1,34 @@
 #include <ap_int.h>
 #include <hls_stream.h>
 #include <ap_axi_sdata.h>
-#include "processHits.h"
 
-struct OutputClusterInfo {
-    ap_uint<ABCStar_ID_BITS> ABCStarID; // ABCStarID of the cluster
-    ap_uint<POSITION_BITS> position;    // Position of the seed hit
-    ap_uint<SIZE_BITS> size;            // Size of the cluster, up to 7 hits
+#define POSITION_BITS 13 // 5 bits for ABCSTarID + 8 for position  
+#define SIZE_BITS 3
+#define ABCStar_SIZE 256 // Assuming a fixed ABCStar size of 256 positions.
+
+struct Hit {
+    ap_uint<POSITION_BITS> position;
+    ap_uint<SIZE_BITS> size;
 };
 
 // Define a new struct for input data to encapsulate it in a stream
 typedef ap_axiu<16, 0, 0, 1> InputData;  // 16-bit data
 
 // Define a new struct for output data to encapsulate it in a stream
-typedef ap_axiu<(ABCStar_ID_BITS + POSITION_BITS + SIZE_BITS), 0, 0, 1> OutputData; // Data width sum of parts
+typedef ap_axiu<(POSITION_BITS + SIZE_BITS), 0, 0, 1> OutputData; // Data width sum of parts
+
+// Checks if two hits are adjacent considering the size of the cluster
+bool areAdjacent(const Hit &first_hit, const Hit &second_hit) {
+    return (first_hit.position + first_hit.size == second_hit.position);
+}
 
 // Outputs a cluster to the stream
-void outputCluster(const Hit &hit, int size, hls::stream<OutputData> &stream, bool isLast = false) {
+void outputCluster(const Hit &hit, hls::stream<OutputData> &stream, bool isLast = false) {
     OutputData outputData;
-    outputData.data = (hit.ABCStarID << (POSITION_BITS + SIZE_BITS)) | (hit.position << SIZE_BITS) | size;
+    outputData.data = (hit.position << SIZE_BITS) | hit.size;
     outputData.last = isLast ? 1 : 0;
     stream.write(outputData);
-    std::cout << "Output cluster: ABCStarID = " << hit.ABCStarID << ", Position = " << hit.position << ", Size = " << size << ", Last = " << outputData.last << std::endl;
+    std::cout << "Output cluster: Position = " << hit.position << ", Size = " << hit.size << ", Last = " << outputData.last << std::endl;
 }
 
 // Function to process hits and cluster them
@@ -30,84 +37,91 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
     #pragma HLS INTERFACE axis port=inputBinariesStream
     #pragma HLS INTERFACE axis port=outputClustersStream
 
-    Hit current_hit;
-    bool last = false;
+    Hit first_hit, second_hit, third_hit;
+    bool init = true, last = false;
 
     while (!inputBinariesStream.empty()) {
         InputData inputData = inputBinariesStream.read();
         last = inputData.last;
 
-        current_hit.ABCStarID = inputData.data.range(15, 11);
+        int ABCStarID = inputData.data.range(15, 11);
         int basePosition = inputData.data.range(10, 3);
         ap_uint<3> sizeBitmask = inputData.data.range(2, 0);
+        second_hit.position = (ABCStarID << 8) | basePosition;
 
-        std::cout << "Read Data: ABCStarID = " << current_hit.ABCStarID << ", Base Position = " << basePosition << ", Bitmask = " << sizeBitmask << std::endl;
+        std::cout << "Read Data: Position = " << second_hit.position << ", Bitmask = " << sizeBitmask << std::endl;
 
-        switch (sizeBitmask) {
+        switch (sizeBitmask.to_uint()) {
             case 0: // 000
-                current_hit.position = basePosition;
-                outputCluster(current_hit, 1, outputClustersStream, last);
+                second_hit.size = 1;
+                outputCluster(second_hit, outputClustersStream, last);
                 break;
 
             case 1: // 001
-                current_hit.position = basePosition;
-                outputCluster(current_hit, 1, outputClustersStream);
-                current_hit.position = basePosition + 1;
-                outputCluster(current_hit, 1, outputClustersStream, last);
+                second_hit.size = 1;
+                outputCluster(second_hit, outputClustersStream);
+                third_hit.position = (ABCStarID << 8) | (basePosition + 3);
+                third_hit.size = 1;
+                outputCluster(third_hit, outputClustersStream, last);
                 break;
 
             case 2: // 010
-                current_hit.position = basePosition;
-                outputCluster(current_hit, 1, outputClustersStream);
-                current_hit.position = basePosition + 2;
-                outputCluster(current_hit, 1, outputClustersStream, last);
+                second_hit.size = 1;
+                outputCluster(second_hit, outputClustersStream);
+                third_hit.position = (ABCStarID << 8) | (basePosition + 2);
+                third_hit.size = 1;
+                outputCluster(third_hit, outputClustersStream, last);
                 break;
 
             case 3: // 011
-                current_hit.position = basePosition;
-                outputCluster(current_hit, 1, outputClustersStream);
-                current_hit.position = basePosition + 2;
-                outputCluster(current_hit, 2, outputClustersStream, last);
+                second_hit.size = 1;
+                outputCluster(second_hit, outputClustersStream);
+                second_hit.position = (ABCStarID << 8) | (basePosition + 2);
+                second_hit.size = 2;
+                outputCluster(second_hit, outputClustersStream, last);
                 break;
 
             case 4: // 100
-                current_hit.position = basePosition;
-                outputCluster(current_hit, 1, outputClustersStream);
-                current_hit.position = basePosition + 3;
-                outputCluster(current_hit, 1, outputClustersStream, last);
+                second_hit.size = 1;
+                outputCluster(second_hit, outputClustersStream);
                 break;
 
             case 5: // 101
-                current_hit.position = basePosition;
-                outputCluster(current_hit, 1, outputClustersStream);
-                current_hit.position = basePosition + 1;
-                outputCluster(current_hit, 2, outputClustersStream);
-                current_hit.position = basePosition + 3;
-                outputCluster(current_hit, 1, outputClustersStream, last);
+                second_hit.size = 1;
+                outputCluster(second_hit, outputClustersStream);
+                second_hit.position = (ABCStarID << 8) | (basePosition + 1);
+                second_hit.size = 1;
+                outputCluster(second_hit, outputClustersStream);
+                third_hit.position = (ABCStarID << 8) | (basePosition + 3);
+                third_hit.size = 1;
+                outputCluster(third_hit, outputClustersStream, last);
                 break;
 
             case 6: // 110
-                current_hit.position = basePosition;
-                outputCluster(current_hit, 1, outputClustersStream);
-                current_hit.position = basePosition + 1;
-                outputCluster(current_hit, 2, outputClustersStream);
-                current_hit.position = basePosition + 2;
-                outputCluster(current_hit, 1, outputClustersStream, last);
+                second_hit.size = 2;
+                outputCluster(second_hit, outputClustersStream, last);
                 break;
 
             case 7: // 111
-                current_hit.position = basePosition;
-                outputCluster(current_hit, 1, outputClustersStream);
-                current_hit.position = basePosition + 1;
-                outputCluster(current_hit, 2, outputClustersStream);
-                current_hit.position = basePosition + 2;
-                outputCluster(current_hit, 1, outputClustersStream);
-                current_hit.position = basePosition + 3;
-                outputCluster(current_hit, 1, outputClustersStream, last);
+                second_hit.size = 3;
+                outputCluster(second_hit, outputClustersStream, last);
                 break;
 
             default:
                 break;
         }
+
+        if (!init && !areAdjacent(first_hit, second_hit)) {
+            outputCluster(first_hit, outputClustersStream);
+        } else {
+            second_hit.size += first_hit.size;
+        }
+
+        first_hit = second_hit;
+        init = false;
+    }
+
+    if (!init) {
+        outputCluster(first_hit, outputClustersStream, true);
     }
 }

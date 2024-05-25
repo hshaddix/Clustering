@@ -2,15 +2,6 @@
 #include <hls_stream.h>
 #include <ap_axi_sdata.h>
 
-#define POSITION_BITS 13 // 5 bits for ABCSTarID + 8 for position  
-#define SIZE_BITS 3
-#define ABCStar_SIZE 256 // Assuming a fixed ABCStar size of 256 positions.
-
-struct Hit {
-    ap_uint<POSITION_BITS> position;
-    ap_uint<SIZE_BITS> size;
-};
-
 // Define a new struct for input data to encapsulate it in a stream
 typedef ap_axiu<16, 0, 0, 1> InputData;  // 16-bit data
 

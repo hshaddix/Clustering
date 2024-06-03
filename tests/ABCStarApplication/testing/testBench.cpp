@@ -12,10 +12,10 @@ int main() {
 
     // Define inputs for each case
     int id1 = 0, position1 = 50;
-    unsigned char bitmask1 = 0b010;
+    unsigned char bitmask1 = 0b111;
 
     int id2 = 0, position2a = 50, position2b = 54;
-    unsigned char bitmask2a = 0b101, bitmask2b = 0b110;
+    unsigned char bitmask2a = 0b110, bitmask2b = 0b100;
 
     int id3a = 0, position3a = 126;
     int id3b = 1, position3b = 0;

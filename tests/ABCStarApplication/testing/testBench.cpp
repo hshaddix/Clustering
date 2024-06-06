@@ -21,7 +21,7 @@ int main() {
     int id3b = 1, position3b = 0;
     unsigned char bitmask3 = 0b100;
 
-    // Case 1: ID = 0, Position = 50, Bitmask = 010
+    // Case 1: ID = 0, Position = 50, Bitmask = 111
     {
         hls::stream<InputData> testDataStream;
         std::cout << "Case 1 Input: ABCStarID = " << id1 << ", Position = " << position1 << ", Bitmask = " << std::bitset<3>(bitmask1) << std::endl;

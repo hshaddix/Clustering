@@ -16,7 +16,7 @@ struct Hit {
 };
 
 typedef ap_axiu<16, 0, 0, 1> InputData;  // 16-bit data
-typedef ap_axiu<(ABCStar_ID_BITS + POSITION_BITS + SIZE_BITS), 0, 0, 1> OutputData; // Data width sum of parts
+typedef ap_axiu<(POSITION_BITS + SIZE_BITS), 0, 0, 1> OutputData; // Data width sum of parts
 
 void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<OutputData> &outputClustersStream);
 

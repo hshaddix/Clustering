@@ -1,6 +1,7 @@
 #include <ap_int.h>
 #include <hls_stream.h>
 #include <ap_axi_sdata.h>
+#include "processHits.h"
 
 // Define a new struct for input data to encapsulate it in a stream
 typedef ap_axiu<16, 0, 0, 1> InputData;  // 16-bit data
@@ -42,41 +43,31 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
 
         std::cout << "Read Data: Position = " << second_hit.position << ", Bitmask = " << sizeBitmask << std::endl;
 
+        // Calculate the size of the current hit based on the bitmask
         switch (sizeBitmask.to_uint()) {
             case 0: // 000
                 second_hit.size = 1;
-                outputCluster(second_hit, outputClustersStream, last);
                 break;
-
             case 1: // 001
                 second_hit.size = 1;
                 outputCluster(second_hit, outputClustersStream);
                 third_hit.position = (ABCStarID << 8) | (basePosition + 3);
                 third_hit.size = 1;
                 outputCluster(third_hit, outputClustersStream, last);
-                break;
-
+                continue; // Skip to the next iteration
             case 2: // 010
                 second_hit.size = 1;
                 outputCluster(second_hit, outputClustersStream);
                 third_hit.position = (ABCStarID << 8) | (basePosition + 2);
                 third_hit.size = 1;
                 outputCluster(third_hit, outputClustersStream, last);
-                break;
-
+                continue; // Skip to the next iteration
             case 3: // 011
-                second_hit.size = 1;
-                outputCluster(second_hit, outputClustersStream);
-                second_hit.position = (ABCStarID << 8) | (basePosition + 2);
                 second_hit.size = 2;
-                outputCluster(second_hit, outputClustersStream, last);
                 break;
-
             case 4: // 100
                 second_hit.size = 1;
-                outputCluster(second_hit, outputClustersStream);
                 break;
-
             case 5: // 101
                 second_hit.size = 1;
                 outputCluster(second_hit, outputClustersStream);
@@ -86,30 +77,28 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
                 third_hit.position = (ABCStarID << 8) | (basePosition + 3);
                 third_hit.size = 1;
                 outputCluster(third_hit, outputClustersStream, last);
-                break;
-
+                continue; // Skip to the next iteration
             case 6: // 110
                 second_hit.size = 2;
-                outputCluster(second_hit, outputClustersStream, last);
                 break;
-
             case 7: // 111
                 second_hit.size = 3;
-                outputCluster(second_hit, outputClustersStream, last);
                 break;
-
             default:
                 break;
         }
 
-        if (!init && !areAdjacent(first_hit, second_hit)) {
-            outputCluster(first_hit, outputClustersStream);
+        if (!init) {
+            if (!areAdjacent(first_hit, second_hit)) {
+                outputCluster(first_hit, outputClustersStream);
+                first_hit = second_hit;
+            } else {
+                first_hit.size += second_hit.size;
+            }
         } else {
-            second_hit.size += first_hit.size;
+            first_hit = second_hit;
+            init = false;
         }
-
-        first_hit = second_hit;
-        init = false;
     }
 
     if (!init) {

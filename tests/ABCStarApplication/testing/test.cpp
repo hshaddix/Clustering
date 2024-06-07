@@ -66,7 +66,7 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
                 second_hit.size = 2;
                 break;
             case 4: // 100
-                second_hit.size = 1;
+                second_hit.size = 2;
                 break;
             case 5: // 101
                 second_hit.size = 1;
@@ -79,10 +79,10 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
                 outputCluster(third_hit, outputClustersStream, last);
                 continue; // Skip to the next iteration
             case 6: // 110
-                second_hit.size = 2;
+                second_hit.size = 3;
                 break;
             case 7: // 111
-                second_hit.size = 3;
+                second_hit.size = 4;
                 break;
             default:
                 break;

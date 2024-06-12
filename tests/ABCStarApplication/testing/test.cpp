@@ -47,43 +47,30 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
         switch (sizeBitmask.to_uint()) {
             case 0: // 000
                 second_hit.size = 1;
-                break;
             case 1: // 001
                 second_hit.size = 1;
                 outputCluster(second_hit, outputClustersStream);
                 third_hit.position = (ABCStarID << 8) | (basePosition + 3);
                 third_hit.size = 1;
-                outputCluster(third_hit, outputClustersStream, last);
-                continue; // Skip to the next iteration
             case 2: // 010
                 second_hit.size = 1;
                 outputCluster(second_hit, outputClustersStream);
                 third_hit.position = (ABCStarID << 8) | (basePosition + 2);
                 third_hit.size = 1;
-                outputCluster(third_hit, outputClustersStream, last);
-                continue; // Skip to the next iteration
             case 3: // 011
-                second_hit.size = 2;
-                break;
+                 third_hit.position = (ABCStarID << 8) | (basePosition + 2);
+                third_hit.size = 2;
             case 4: // 100
                 second_hit.size = 2;
-                break;
             case 5: // 101
-                second_hit.size = 1;
-                outputCluster(second_hit, outputClustersStream);
-                second_hit.position = (ABCStarID << 8) | (basePosition + 1);
-                second_hit.size = 1;
+                second_hit.size = 2;
                 outputCluster(second_hit, outputClustersStream);
                 third_hit.position = (ABCStarID << 8) | (basePosition + 3);
                 third_hit.size = 1;
-                outputCluster(third_hit, outputClustersStream, last);
-                continue; // Skip to the next iteration
             case 6: // 110
                 second_hit.size = 3;
-                break;
             case 7: // 111
                 second_hit.size = 4;
-                break;
             default:
                 break;
         }

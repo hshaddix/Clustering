@@ -47,19 +47,22 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
         switch (sizeBitmask.to_uint()) {
             case 0: // 000
                 second_hit.size = 1;
-            case 1: // 001
+                case 1: // 001
                 second_hit.size = 1;
                 outputCluster(second_hit, outputClustersStream);
                 third_hit.position = (ABCStarID << 8) | (basePosition + 3);
                 third_hit.size = 1;
+                second_hit = third_hit;
             case 2: // 010
                 second_hit.size = 1;
                 outputCluster(second_hit, outputClustersStream);
                 third_hit.position = (ABCStarID << 8) | (basePosition + 2);
                 third_hit.size = 1;
+                second_hit = third_hit;
             case 3: // 011
-                 third_hit.position = (ABCStarID << 8) | (basePosition + 2);
+                third_hit.position = (ABCStarID << 8) | (basePosition + 2);
                 third_hit.size = 2;
+                second_hit = third_hit;
             case 4: // 100
                 second_hit.size = 2;
             case 5: // 101
@@ -67,6 +70,7 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
                 outputCluster(second_hit, outputClustersStream);
                 third_hit.position = (ABCStarID << 8) | (basePosition + 3);
                 third_hit.size = 1;
+                second_hit = third_hit;
             case 6: // 110
                 second_hit.size = 3;
             case 7: // 111

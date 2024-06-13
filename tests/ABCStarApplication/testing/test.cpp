@@ -52,25 +52,32 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
                 outputCluster(second_hit, outputClustersStream);
                 third_hit.position = (ABCStarID << 8) | (basePosition + 3);
                 third_hit.size = 1;
+                break;
             case 2: // 010
                 second_hit.size = 1;
                 outputCluster(second_hit, outputClustersStream);
                 third_hit.position = (ABCStarID << 8) | (basePosition + 2);
                 third_hit.size = 1;
+                break;
             case 3: // 011
                 third_hit.position = (ABCStarID << 8) | (basePosition + 2);
                 third_hit.size = 2;
+                break; 
             case 4: // 100
                 second_hit.size = 2;
+                break; 
             case 5: // 101
                 second_hit.size = 2;
                 outputCluster(second_hit, outputClustersStream);
                 third_hit.position = (ABCStarID << 8) | (basePosition + 3);
                 third_hit.size = 1;
+                break;
             case 6: // 110
                 second_hit.size = 3;
+                break;
             case 7: // 111
                 second_hit.size = 4;
+                break;
             default:
                 break;
         }

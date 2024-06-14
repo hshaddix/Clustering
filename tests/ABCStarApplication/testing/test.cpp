@@ -47,6 +47,7 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
         switch (sizeBitmask.to_uint()) {
             case 0: // 000
                 second_hit.size = 1;
+                break; 
                 case 1: // 001
                 second_hit.size = 1;
                 outputCluster(second_hit, outputClustersStream);

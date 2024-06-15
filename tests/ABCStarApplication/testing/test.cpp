@@ -40,6 +40,7 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
         int basePosition = inputData.data.range(10, 3);
         ap_uint<3> sizeBitmask = inputData.data.range(2, 0);
         second_hit.position = (ABCStarID << 8) | basePosition;
+        third_hit.size = 0; // Initialize third_hit size to zero
 
         std::cout << "Read Data: Position = " << second_hit.position << ", Bitmask = " << sizeBitmask << std::endl;
 
@@ -47,8 +48,8 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
         switch (sizeBitmask.to_uint()) {
             case 0: // 000
                 second_hit.size = 1;
-                break; 
-                case 1: // 001
+                break;
+            case 1: // 001
                 second_hit.size = 1;
                 outputCluster(second_hit, outputClustersStream);
                 third_hit.position = (ABCStarID << 8) | (basePosition + 3);
@@ -62,13 +63,13 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
                 break;
             case 3: // 011
                 second_hit.size = 1;
-                outputCluster(second_hit, outputClustersStream); 
+                outputCluster(second_hit, outputClustersStream);
                 third_hit.position = (ABCStarID << 8) | (basePosition + 2);
                 third_hit.size = 2;
-                break; 
+                break;
             case 4: // 100
                 second_hit.size = 2;
-                break; 
+                break;
             case 5: // 101
                 second_hit.size = 2;
                 outputCluster(second_hit, outputClustersStream);
@@ -85,16 +86,33 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
                 break;
         }
 
-        if (!init) {
-            if (!areAdjacent(first_hit, second_hit)) {
-                outputCluster(first_hit, outputClustersStream);
-                first_hit = second_hit;
+        if (third_hit.size == 0) {
+            if (!init) {
+                if (!areAdjacent(first_hit, second_hit)) {
+                    outputCluster(first_hit, outputClustersStream);
+                    first_hit = second_hit;
+                } else {
+                    first_hit.size += second_hit.size;
+                }
             } else {
-                first_hit.size += second_hit.size;
+                first_hit = second_hit;
+                init = false;
             }
         } else {
-            first_hit = second_hit;
-            init = false;
+            if (!init) {
+                if (!areAdjacent(first_hit, second_hit)) {
+                    outputCluster(first_hit, outputClustersStream);
+                    outputCluster(second_hit, outputClustersStream);
+                } else {
+                    second_hit.size += first_hit.size;
+                    outputCluster(second_hit, outputClustersStream);
+                }
+                first_hit = third_hit;
+            } else {
+                outputCluster(second_hit, outputClustersStream);
+                first_hit = third_hit;
+                init = false;
+            }
         }
     }
 

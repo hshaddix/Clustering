@@ -100,8 +100,8 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
                     outputCluster(first_hit, outputClustersStream);
                     outputCluster(second_hit, outputClustersStream);
                 } else {
-                    second_hit.size += first_hit.size;
-                    outputCluster(second_hit, outputClustersStream);
+                    first_hit.size += second_hit.size;
+                    outputCluster(first_hit, outputClustersStream);
                 }
                 first_hit = third_hit;
             } else {

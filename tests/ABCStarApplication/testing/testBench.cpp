@@ -1,137 +1,123 @@
-#include <iostream>
 #include <ap_int.h>
 #include <hls_stream.h>
+#include <ap_axi_sdata.h>
 #include "processHits.h"
-#include <bitset>
 
-#ifndef __SYNTHESIS__
-// Testbench
-int main() {
-    // Declare the output stream to hold cluster information
-    hls::stream<OutputData> outputClustersStream;
+// Define a new struct for input data to encapsulate it in a stream
+typedef ap_axiu<16, 0, 0, 1> InputData;  // 16-bit data
 
-    // Define inputs for each case
-    int id1 = 0, position1 = 50;
-    unsigned char bitmask1 = 0b111;
+// Define a new struct for output data to encapsulate it in a stream
+typedef ap_axiu<(POSITION_BITS + SIZE_BITS), 0, 0, 1> OutputData; // Data width sum of parts
 
-    int id2 = 0, position2a = 50, position2b = 54;
-    unsigned char bitmask2a = 0b110, bitmask2b = 0b100;
-
-    int id3 = 0, position3 = 50;
-    unsigned char bitmask3 = 0b011;
-
-    int id4a = 0, position4a = 50;
-    int id4b = 0, position4b = 55;
-    unsigned char bitmask4a = 0b101, bitmask4b = 0b001;
-
-    int id5a = 0, position5a = 252;
-    int id5b = 1, position5b = 0;
-    unsigned char bitmask5a = 0b111, bitmask5b = 0b100;
-
-    // Case 1: ID = 0, Position = 50, Bitmask = 111
-    {
-        hls::stream<InputData> testDataStream;
-        std::cout << "Case 1 Input: ABCStarID = " << id1 << ", Position = " << position1 << ", Bitmask = " << std::bitset<3>(bitmask1) << std::endl;
-        unsigned short data1 = (id1 << 11) | (position1 << 3) | bitmask1;
-        InputData inputDataCase1 = {data1, false}; // Not the last data
-        testDataStream.write(inputDataCase1);
-
-        processHits(testDataStream, outputClustersStream);
-
-        std::cout << "Case 1 Results:" << std::endl;
-        while (!outputClustersStream.empty()) {
-            OutputData output = outputClustersStream.read();
-            std::cout << "Cluster: Position = " << (output.data >> SIZE_BITS)
-                      << ", Size = " << (output.data & ((1 << SIZE_BITS) - 1))
-                      << ", Last = " << output.last << std::endl;
-        }
-    }
-
-    // Case 2: Two clusters on the same ABCStar with positions 50 and 54
-    {
-        hls::stream<InputData> testDataStream;
-        std::cout << "Case 2 Input: \n";
-        std::cout << "    ABCStarID = " << id2 << ", Position = " << position2a << ", Bitmask = " << std::bitset<3>(bitmask2a) << std::endl;
-        std::cout << "    ABCStarID = " << id2 << ", Position = " << position2b << ", Bitmask = " << std::bitset<3>(bitmask2b) << std::endl;
-        InputData inputData1 = {(id2 << 11) | (position2a << 3) | bitmask2a, false}; // Not the last data
-        InputData inputData2 = {(id2 << 11) | (position2b << 3) | bitmask2b, true};  // Last data
-        testDataStream.write(inputData1);
-        testDataStream.write(inputData2);
-
-        processHits(testDataStream, outputClustersStream);
-
-        std::cout << "Case 2 Results:" << std::endl;
-        while (!outputClustersStream.empty()) {
-            OutputData output = outputClustersStream.read();
-            std::cout << "Cluster: Position = " << (output.data >> SIZE_BITS)
-                      << ", Size = " << (output.data & ((1 << SIZE_BITS) - 1))
-                      << ", Last = " << output.last << std::endl;
-        }
-    }
-
-    // Case 3: ID = 0, Position = 50, Bitmask = 011
-    {
-        hls::stream<InputData> testDataStream;
-        std::cout << "Case 3 Input: ABCStarID = " << id3 << ", Position = " << position3 << ", Bitmask = " << std::bitset<3>(bitmask3) << std::endl;
-        unsigned short data3 = (id3 << 11) | (position3 << 3) | bitmask3;
-        InputData inputDataCase3 = {data3, false}; // Not the last data
-        testDataStream.write(inputDataCase3);
-
-        processHits(testDataStream, outputClustersStream);
-
-        std::cout << "Case 3 Results:" << std::endl;
-        while (!outputClustersStream.empty()) {
-            OutputData output = outputClustersStream.read();
-            std::cout << "Cluster: Position = " << (output.data >> SIZE_BITS)
-                      << ", Size = " << (output.data & ((1 << SIZE_BITS) - 1))
-                      << ", Last = " << output.last << std::endl;
-        }
-    }
-
-    // Case 4: ID = 0, Position = 50, Bitmask = 101 and ID = 0, Position = 55, Bitmask = 001
-    {
-        hls::stream<InputData> testDataStream;
-        std::cout << "Case 4 Input: \n";
-        std::cout << "    ABCStarID = " << id4a << ", Position = " << position4a << ", Bitmask = " << std::bitset<3>(bitmask4a) << std::endl;
-        std::cout << "    ABCStarID = " << id4b << ", Position = " << position4b << ", Bitmask = " << std::bitset<3>(bitmask4b) << std::endl;
-        InputData inputData1 = {(id4a << 11) | (position4a << 3) | bitmask4a, false}; // Not the last data
-        InputData inputData2 = {(id4b << 11) | (position4b << 3) | bitmask4b, true};  // Last data
-        testDataStream.write(inputData1);
-        testDataStream.write(inputData2);
-
-        processHits(testDataStream, outputClustersStream);
-
-        std::cout << "Case 4 Results:" << std::endl;
-        while (!outputClustersStream.empty()) {
-            OutputData output = outputClustersStream.read();
-            std::cout << "Cluster: Position = " << (output.data >> SIZE_BITS)
-                      << ", Size = " << (output.data & ((1 << SIZE_BITS) - 1))
-                      << ", Last = " << output.last << std::endl;
-        }
-    }
-
-    // Case 5: ID = 0, Position = 252, Bitmask = 111 and ID = 1, Position = 0, Bitmask = 100
-    {
-        hls::stream<InputData> testDataStream;
-        std::cout << "Case 5 Input: \n";
-        std::cout << "    ABCStarID = " << id5a << ", Position = " << position5a << ", Bitmask = " << std::bitset<3>(bitmask5a) << std::endl;
-        std::cout << "    ABCStarID = " << id5b << ", Position = " << position5b << ", Bitmask = " << std::bitset<3>(bitmask5b) << std::endl;
-        InputData inputData1 = {(id5a << 11) | (position5a << 3) | bitmask5a, false}; // Not the last data
-        InputData inputData2 = {(id5b << 11) | (position5b << 3) | bitmask5b, true};  // Last data
-        testDataStream.write(inputData1);
-        testDataStream.write(inputData2);
-
-        processHits(testDataStream, outputClustersStream);
-
-        std::cout << "Case 5 Results:" << std::endl;
-        while (!outputClustersStream.empty()) {
-            OutputData output = outputClustersStream.read();
-            std::cout << "Cluster: Position = " << (output.data >> SIZE_BITS)
-                      << ", Size = " << (output.data & ((1 << SIZE_BITS) - 1))
-                      << ", Last = " << output.last << std::endl;
-        }
-    }
-
-    return 0;
+// Checks if two hits are adjacent considering the size of the cluster
+bool areAdjacent(const Hit &first_hit, const Hit &second_hit) {
+    return (first_hit.position + first_hit.size == second_hit.position);
 }
-#endif
+
+// Outputs a cluster to the stream
+void outputCluster(const Hit &hit, hls::stream<OutputData> &stream, bool isLast = false) {
+    OutputData outputData;
+    outputData.data = (hit.position << SIZE_BITS) | hit.size;
+    outputData.last = isLast ? 1 : 0;
+    stream.write(outputData);
+    std::cout << "Output cluster: Position = " << hit.position << ", Size = " << hit.size << ", Last = " << outputData.last << std::endl;
+}
+
+// Function to process hits and cluster them
+void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<OutputData> &outputClustersStream) {
+    #pragma HLS INTERFACE s_axilite port=return
+    #pragma HLS INTERFACE axis port=inputBinariesStream
+    #pragma HLS INTERFACE axis port=outputClustersStream
+
+    Hit first_hit, second_hit, third_hit;
+    bool init = true, last = false;
+
+    while (!inputBinariesStream.empty()) {
+        InputData inputData = inputBinariesStream.read();
+        last = inputData.last;
+
+        int ABCStarID = inputData.data.range(15, 11);
+        int basePosition = inputData.data.range(10, 3);
+        ap_uint<3> sizeBitmask = inputData.data.range(2, 0);
+        second_hit.position = (ABCStarID << 8) | basePosition;
+        third_hit.size = 0; // Initialize third_hit size to zero
+
+        std::cout << "Read Data: Position = " << second_hit.position << ", Bitmask = " << sizeBitmask << std::endl;
+
+        // Calculate the size of the current hit based on the bitmask
+        switch (sizeBitmask.to_uint()) {
+            case 0: // 000
+                second_hit.size = 1;
+                break;
+            case 1: // 001
+                second_hit.size = 1;
+                third_hit.position = (ABCStarID << 8) | (basePosition + 3);
+                third_hit.size = 1;
+                break;
+            case 2: // 010
+                second_hit.size = 1;
+                third_hit.position = (ABCStarID << 8) | (basePosition + 2);
+                third_hit.size = 1;
+                break;
+            case 3: // 011
+                second_hit.size = 1;
+                third_hit.position = (ABCStarID << 8) | (basePosition + 2);
+                third_hit.size = 2;
+                break;
+            case 4: // 100
+                second_hit.size = 2;
+                break;
+            case 5: // 101
+                second_hit.size = 2;
+                third_hit.position = (ABCStarID << 8) | (basePosition + 3);
+                third_hit.size = 1;
+                break;
+            case 6: // 110
+                second_hit.size = 3;
+                break;
+            case 7: // 111
+                second_hit.size = 4;
+                break;
+            default:
+                break;
+        }
+
+        if (third_hit.size == 0) {
+            if (!init) {
+                if (!areAdjacent(first_hit, second_hit)) {
+                    outputCluster(first_hit, outputClustersStream);
+                    first_hit = second_hit;
+                } else {
+                    first_hit.size += second_hit.size;
+                }
+            } else {
+                first_hit = second_hit;
+                init = false;
+            }
+        } else {
+            if (!init) {
+                if (!areAdjacent(first_hit, second_hit)) {
+                    outputCluster(first_hit, outputClustersStream);
+                    outputCluster(second_hit, outputClustersStream);
+                } else {
+                    first_hit.size += second_hit.size;
+                    outputCluster(first_hit, outputClustersStream);
+                }
+                first_hit = third_hit;
+            } else {
+                outputCluster(second_hit, outputClustersStream);
+                first_hit = third_hit;
+                init = false;
+            }
+        }
+
+        if (last) {
+            outputCluster(first_hit, outputClustersStream, true);
+            init = true;
+        }
+    }
+
+    if (!init) {
+        outputCluster(first_hit, outputClustersStream, true);
+    }
+}

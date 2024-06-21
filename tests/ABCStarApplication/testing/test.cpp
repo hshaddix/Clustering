@@ -10,7 +10,12 @@ typedef ap_axiu<16, 0, 0, 1> InputData;  // 16-bit data
 typedef ap_axiu<(POSITION_BITS + SIZE_BITS), 0, 0, 1> OutputData; // Data width sum of parts
 
 // Checks if two hits are adjacent considering the size of the cluster
-bool areAdjacent(const Hit &first_hit, const Hit &second_hit) {
+bool areAdjacent(const Hit &first_hit, const Hit &second_hit, bool &error) {
+    if (first_hit.position + first_hit.size > second_hit.position) {
+        error = true;
+        return false;
+    }
+    error = false;
     return (first_hit.position + first_hit.size == second_hit.position);
 }
 
@@ -21,6 +26,15 @@ void outputCluster(const Hit &hit, hls::stream<OutputData> &stream, bool isLast 
     outputData.last = isLast ? 1 : 0;
     stream.write(outputData);
     std::cout << "Output cluster: Position = " << hit.position << ", Size = " << hit.size << ", Last = " << outputData.last << std::endl;
+}
+
+// Outputs an error message to the stream
+void outputError(hls::stream<OutputData> &stream) {
+    OutputData outputData;
+    outputData.data = 0xFFF;
+    outputData.last = 1;
+    stream.write(outputData);
+    std::cout << "Output error: FFF" << std::endl;
 }
 
 // Function to process hits and cluster them
@@ -82,9 +96,15 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
                 break;
         }
 
+        bool error = false;
         if (third_hit.size == 0) {
             if (!init) {
-                if (!areAdjacent(first_hit, second_hit)) {
+                if (!areAdjacent(first_hit, second_hit, error)) {
+                    if (error) {
+                        outputError(outputClustersStream);
+                        init = true;
+                        continue;
+                    }
                     outputCluster(first_hit, outputClustersStream);
                     first_hit = second_hit;
                 } else {
@@ -96,7 +116,12 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
             }
         } else {
             if (!init) {
-                if (!areAdjacent(first_hit, second_hit)) {
+                if (!areAdjacent(first_hit, second_hit, error)) {
+                    if (error) {
+                        outputError(outputClustersStream);
+                        init = true;
+                        continue;
+                    }
                     outputCluster(first_hit, outputClustersStream);
                     outputCluster(second_hit, outputClustersStream);
                 } else {

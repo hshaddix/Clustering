@@ -110,6 +110,11 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
                 init = false;
             }
         }
+
+        if (last) {
+            outputCluster(first_hit, outputClustersStream, true);
+            init = true;
+        }
     }
 
     if (!init) {

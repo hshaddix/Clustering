@@ -25,7 +25,7 @@ void outputCluster(const Hit &hit, hls::stream<OutputData> &stream, bool isLast 
     outputData.data = (hit.position << SIZE_BITS) | hit.size;
     outputData.last = isLast ? 1 : 0;
     stream.write(outputData);
-    std::cout << "Output cluster: Position = " << hit.position << ", Size = " << hit.size << ", Last = " << outputData.last << std::endl;
+//    std::cout << "Output cluster: Position = " << hit.position << ", Size = " << hit.size << ", Last = " << outputData.last << std::endl;
 }
 
 // Outputs an error message to the stream
@@ -34,7 +34,7 @@ void outputError(hls::stream<OutputData> &stream) {
     outputData.data = 0xFFF;
     outputData.last = 1;
     stream.write(outputData);
-    std::cout << "Output error: FFF" << std::endl;
+  //  std::cout << "Output error: FFF" << std::endl;
 }
 
 // Function to process hits and cluster them
@@ -56,7 +56,7 @@ void processHits(hls::stream<InputData> &inputBinariesStream, hls::stream<Output
         second_hit.position = (ABCStarID << 8) | basePosition;
         third_hit.size = 0; // Initialize third_hit size to zero
 
-        std::cout << "Read Data: Position = " << second_hit.position << ", Bitmask = " << sizeBitmask << std::endl;
+    //    std::cout << "Read Data: Position = " << second_hit.position << ", Bitmask = " << sizeBitmask << std::endl;
 
         // Calculate the size of the current hit based on the bitmask
         switch (sizeBitmask.to_uint()) {

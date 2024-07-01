@@ -1,81 +1,61 @@
 #include "xcl2.hpp"
 #include <vector>
 #include <iostream>
+#include <bitset>
 
-// Helper function to check the adjacency of hits
-bool areAdjacent(const int &pos1, const int &pos2, const int &size1) {
-    return (pos1 + size1 == pos2);
-}
+#define DATA_SIZE 4096
 
-int main(int argc, char* argv[]) {
+int main(int argc, char** argv) {
     if (argc != 2) {
-        std::cout << "Usage: " << argv[0] << " <XCLBIN file>" << std::endl;
+        std::cout << "Usage: " << argv[0] << " <XCLBIN File>" << std::endl;
         return EXIT_FAILURE;
     }
 
     std::string binaryFile = argv[1];
     cl_int err;
-    cl::Context context;
-    cl::Kernel kernel;
-    cl::CommandQueue q;
+    std::vector<short> inputData(DATA_SIZE);
+    std::vector<short> outputData(DATA_SIZE);
 
-    // Initialize the OpenCL environment
+    size_t input_size_in_bytes = inputData.size() * sizeof(short);
+    size_t output_size_in_bytes = outputData.size() * sizeof(short);
+
+    // Populate input data
+    for (size_t i = 0; i < DATA_SIZE; ++i) {
+        inputData[i] = i % 256;
+    }
+
+    // Get the Xilinx devices and program the device
     auto devices = xcl::get_xil_devices();
+    auto device = devices[0];
+    auto context = cl::Context(device, nullptr, nullptr, nullptr, &err);
+    auto q = cl::CommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, &err);
     auto fileBuf = xcl::read_binary_file(binaryFile);
     cl::Program::Binaries bins{{fileBuf.data(), fileBuf.size()}};
-    bool valid_device = false;
+    auto program = cl::Program(context, {device}, bins, nullptr, &err);
 
-    for (unsigned int i = 0; i < devices.size(); i++) {
-        auto device = devices[i];
-        OCL_CHECK(err, context = cl::Context(device, nullptr, nullptr, nullptr, &err));
-        OCL_CHECK(err, q = cl::CommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, &err));
-        std::cout << "Trying to program device[" << i << "]: " << device.getInfo<CL_DEVICE_NAME>() << std::endl;
-        cl::Program program(context, {device}, bins, nullptr, &err);
-        if (err != CL_SUCCESS) {
-            std::cout << "Failed to program device[" << i << "] with xclbin file!\n";
-        } else {
-            std::cout << "Device[" << i << "]: program successful!\n";
-            OCL_CHECK(err, kernel = cl::Kernel(program, "processHits", &err));
-            valid_device = true;
-            break;
-        }
-    }
+    auto krnl = cl::Kernel(program, "processHits", &err);
 
-    if (!valid_device) {
-        std::cout << "Failed to program any device found, exit!\n";
-        exit(EXIT_FAILURE);
-    }
+    // Allocate Buffer in Global Memory
+    cl::Buffer buffer_in(context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_ONLY, input_size_in_bytes, inputData.data(), &err);
+    cl::Buffer buffer_out(context, CL_MEM_USE_HOST_PTR | CL_MEM_WRITE_ONLY, output_size_in_bytes, outputData.data(), &err);
 
-    // Input data
-    std::vector<ap_uint<16>> inputData = {
-        // Add input data here
-    };
-
-    size_t input_size_in_bytes = inputData.size() * sizeof(ap_uint<16>);
-    std::vector<ap_uint<16>> outputData(inputData.size());
-
-    // Allocate device buffer
-    OCL_CHECK(err, cl::Buffer buffer_input(context, CL_MEM_USE_HOST_PTR | CL_MEM_READ_ONLY, input_size_in_bytes, inputData.data(), &err));
-    OCL_CHECK(err, cl::Buffer buffer_output(context, CL_MEM_USE_HOST_PTR | CL_MEM_WRITE_ONLY, input_size_in_bytes, outputData.data(), &err));
-
-    // Set kernel arguments
-    OCL_CHECK(err, err = kernel.setArg(0, buffer_input));
-    OCL_CHECK(err, err = kernel.setArg(1, buffer_output));
+    // Set the kernel arguments
+    krnl.setArg(0, buffer_in);
+    krnl.setArg(1, buffer_out);
 
     // Copy input data to device global memory
-    OCL_CHECK(err, err = q.enqueueMigrateMemObjects({buffer_input}, 0));
+    q.enqueueMigrateMemObjects({buffer_in}, 0);
 
-    // Launch the kernel
-    OCL_CHECK(err, err = q.enqueueTask(kernel));
+    // Launch the Kernel
+    q.enqueueTask(krnl);
 
-    // Copy result from device to host
-    OCL_CHECK(err, err = q.enqueueMigrateMemObjects({buffer_output}, CL_MIGRATE_MEM_OBJECT_HOST));
-    OCL_CHECK(err, err = q.finish());
+    // Copy result from device global memory to host local memory
+    q.enqueueMigrateMemObjects({buffer_out}, CL_MIGRATE_MEM_OBJECT_HOST);
+    q.finish();
 
-    // Print results
-    std::cout << "Output results:" << std::endl;
-    for (size_t i = 0; i < outputData.size(); i++) {
-        std::cout << "Output[" << i << "]: " << outputData[i].to_string(16) << std::endl;
+    // Print output
+    for (size_t i = 0; i < DATA_SIZE; i++) {
+        std::cout << "Output[" << i << "] = " << std::bitset<16>(outputData[i]) << std::endl;
     }
 
     return 0;

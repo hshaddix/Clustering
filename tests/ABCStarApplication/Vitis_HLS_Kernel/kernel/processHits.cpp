@@ -2,6 +2,7 @@
 #include <hls_stream.h>
 #include <ap_axi_sdata.h>
 #include "processHits.h"
+#include <iostream>
 
 // Define a new struct for input data to encapsulate it in a stream
 typedef ap_axiu<16, 0, 0, 1> InputData;  // 16-bit data

@@ -8,24 +8,66 @@
 
 // Function to set up OpenCL device
 int setupDevice(std::vector<cl::Device>& devices, cl::Device& device) {
-    cl_int err;
-    std::vector<cl::Platform> platforms;
-    // Get all available platforms (e.g., Xilinx, Intel, AMD)
-    OCL_CHECK(err, err = cl::Platform::get(&platforms));
-
-    // Find Xilinx platform
-    for (size_t i = 0; i < platforms.size(); i++) {
-        cl::Platform platform = platforms[i];
-        std::string platformName = platform.getInfo<CL_PLATFORM_NAME>(&err);
-        if (platformName == "Xilinx") {
-  // Get devices for the Xilinx platform
-            OCL_CHECK(err, err = platform.getDevices(CL_DEVICE_TYPE_ACCELERATOR, &devices));
-            device = devices[0]; // Use the first available device
-            return EXIT_SUCCESS;
+    bool found_device = false;
+  // traversing all Platforms To find Xilinx Platform and targeted
+  // Device in Xilinx Platform
+  std::vector < cl::Platform > platforms;
+  cl::Platform::get( & platforms);
+  std::cout << "Scanning Platforms" << std::endl;
+  std::cout << "number: " << platforms.size() << std::endl;
+  for (size_t i = 0;
+    (i < platforms.size()) & (found_device == false); i++) {
+    cl::Platform platform = platforms[i];
+    std::string platformName = platform.getInfo < CL_PLATFORM_NAME > ();
+    std::cout << "Found platform: " << std::endl;
+    std::cout << platformName << std::endl;
+    if (platformName == "Xilinx") {
+      devices.clear();
+      platform.getDevices(CL_DEVICE_TYPE_ACCELERATOR, & devices);
+      std::cout << "number Devices: " << devices.size() << std::endl;
+      if (devices.size()) {
+        for (size_t d = 0; d < devices.size(); d++) {
+          std::string deviceName = devices[0].getInfo < CL_DEVICE_NAME > ();
+          std::cout << "Device: (" << d << "): " << deviceName << std::endl;
+          // if(deviceName.find("u280") != std::string::npos){
+          device = devices[0];
+          found_device = true;
+          // break;
+          // } else {
+          // devices.erase(devices.begin());
+          // }
         }
+      }
     }
-    std::cerr << "Error: Failed to find Xilinx platform or devices." << std::endl;
+  }
+  // return EXIT_FAILURE;
+  if (found_device == false) {
+    std::cout << "Error: Unable to find Target Device " <<
+      device.getInfo < CL_DEVICE_NAME > () << std::endl;
     return EXIT_FAILURE;
+  }
+  devices.resize(1);
+  return 0;
+
+
+    //cl_int err;
+    //std::vector<cl::Platform> platforms;
+    //// Get all available platforms (e.g., Xilinx, Intel, AMD)
+    //OCL_CHECK(err, err = cl::Platform::get(&platforms));
+
+    //// Find Xilinx platform
+    //for (size_t i = 0; i < platforms.size(); i++) {
+    //    cl::Platform platform = platforms[i];
+    //    std::string platformName = platform.getInfo<CL_PLATFORM_NAME>(&err);
+    //    if (platformName == "Xilinx") {
+  //// Get devices for the Xilinx platform
+    //        OCL_CHECK(err, err = platform.getDevices(CL_DEVICE_TYPE_ACCELERATOR, &devices));
+    //        device = devices[0]; // Use the first available device
+    //        return EXIT_SUCCESS;
+    //    }
+    //}
+    //std::cerr << "Error: Failed to find Xilinx platform or devices." << std::endl;
+    //return EXIT_FAILURE;
 }
 
 int main(int argc, char** argv) {

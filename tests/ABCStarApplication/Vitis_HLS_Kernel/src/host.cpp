@@ -1,9 +1,9 @@
+#define CL_TARGET_OPENCL_VERSION 220  // Target OpenCL version 2.2
 #include <CL/cl.h>
 #include <vector>
 #include <iostream>
 #include <bitset>
 #include <fstream>
-#include <sstream>
 
 // Define the data size
 #define DATA_SIZE 4096
@@ -107,13 +107,25 @@ int main(int argc, char** argv) {
     cl_context context = clCreateContext(nullptr, 1, &device, nullptr, nullptr, &status);
     checkError(status, "Failed to create context.");
 
-    cl_command_queue queue = clCreateCommandQueue(context, device, CL_QUEUE_PROFILING_ENABLE, &status);
-    checkError(status, "Failed to create command queue.");
+    cl_command_queue_properties props[] = { CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE, 0 };
+    cl_command_queue queue = clCreateCommandQueueWithProperties(context, device, props, &status);
+    checkError(status, "Failed to create command queue with properties.");
 
     // Read binary file and create program
     std::vector<unsigned char> fileBuf = readBinaryFile(binaryFile);
-    cl_program program = clCreateProgramWithBinary(context, 1, &device, &fileBuf.size(), (const unsigned char**)&fileBuf.data(), nullptr, &status);
-    checkError(status, "Failed to create program with binary.");
+
+    size_t binary_size = fileBuf.size();
+    if (binary_size == 0) {
+        std::cerr << "Error: Binary file is empty or could not be read." << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    const unsigned char* binary_data = fileBuf.data();
+    cl_program program = clCreateProgramWithBinary(context, 1, &device, &binary_size, &binary_data, nullptr, &status);
+    if (status != CL_SUCCESS || program == nullptr) {
+        std::cerr << "Failed to create program with binary. Error code: " << status << std::endl;
+        return EXIT_FAILURE;
+    }
 
     status = clBuildProgram(program, 1, &device, nullptr, nullptr, nullptr);
     checkError(status, "Failed to build program.");

@@ -1,3 +1,5 @@
+Further documentation of this code and project can be found at: https://cds.cern.ch/record/2908246
+
 The following is how to run the kernelization using this repo: 
 from hpcfpga02:
 
